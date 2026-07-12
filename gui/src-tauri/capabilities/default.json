@@ -6,6 +6,7 @@
   "permissions": [
     "core:default",
     "opener:default",
+    "fs:allow-appdata-write-recursive",
     {
       "identifier": "shell:allow-execute",
       "allow": [
