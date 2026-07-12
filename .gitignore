@@ -1,0 +1,19 @@
+.worktrees/
+
+# build outputs
+maxi_solver_gpu
+yatzy_cpu
+test_precompute_std
+test_yatzy_engine
+
+# runtime artifacts
+checkpoint_maxi_gpu.bin
+checkpoint_maxi_gpu.bin.tmp
+yatzy_cpu_dp.bin
+test_cli_dp_cache.bin
+test_dp_cache_roundtrip.bin
+test_dp_cache_shared.bin
+
+# Windows zone-identifier alternate-data streams (from files copied over from Windows)
+*:Zone.Identifier
+*:sec.endpointdlp
