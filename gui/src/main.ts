@@ -13,6 +13,16 @@ import {
 let state: GameState = initialGameState();
 let lastResult: QueryResult | null = null;
 
+// Bumped on every state change so an in-flight query can detect that its
+// result is stale (the state it was computed for no longer applies) before
+// applying it — see maybeQuery.
+let generation = 0;
+
+function setState(next: GameState): void {
+  state = next;
+  generation++;
+}
+
 function renderAll(): void {
   renderScorecard(state);
   renderRerollsIndicator(state);
@@ -38,6 +48,7 @@ async function maybeQuery(): Promise<void> {
   try {
     do {
       queryQueued = false;
+      const myGeneration = generation;
       if (!allDiceValid(state.dice)) {
         lastResult = null;
         renderAll();
@@ -45,9 +56,21 @@ async function maybeQuery(): Promise<void> {
       }
       renderComputing();
       try {
-        lastResult = await getRecommendation(state, state.dice as number[]);
+        const result = await getRecommendation(state, state.dice as number[]);
+        // State moved on while this call was in flight (e.g. New Game) —
+        // this result no longer applies. Force another pass so the next
+        // iteration re-evaluates against the current state instead.
+        if (generation !== myGeneration) {
+          queryQueued = true;
+          continue;
+        }
+        lastResult = result;
         renderError(null);
       } catch (err) {
+        if (generation !== myGeneration) {
+          queryQueued = true;
+          continue;
+        }
         lastResult = null;
         renderError(err instanceof Error ? err.message : String(err));
       }
@@ -61,18 +84,18 @@ async function maybeQuery(): Promise<void> {
 function handleDiceChange(index: number, value: number | null): void {
   const dice = [...state.dice];
   dice[index] = value;
-  state = setDice(state, dice);
+  setState(setDice(state, dice));
   void maybeQuery();
 }
 
 function handleScoreCategory(category: number, resultingScore: number): void {
-  state = scoreCategory(state, category, resultingScore);
+  setState(scoreCategory(state, category, resultingScore));
   lastResult = null;
   renderAll();
 }
 
 function handleHold(holdValues: number[]): void {
-  state = applyHold(state, holdValues);
+  setState(applyHold(state, holdValues));
   lastResult = null;
   renderAll();
   // Holding all 5 dice leaves the roll unchanged and still valid, so this
@@ -82,19 +105,19 @@ function handleHold(holdValues: number[]): void {
 }
 
 function handleReroll(): void {
-  state = advanceReroll(state);
+  setState(advanceReroll(state));
   lastResult = null;
   renderAll();
 }
 
 function handleRollRemaining(): void {
-  state = setDice(state, rollRemaining(state.dice));
+  setState(setDice(state, rollRemaining(state.dice)));
   renderAll();
   void maybeQuery();
 }
 
 function handleNewGame(): void {
-  state = initialGameState();
+  setState(initialGameState());
   lastResult = null;
   renderError(null);
   renderAll();
