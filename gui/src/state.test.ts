@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   initialGameState, isGameComplete, allDiceValid, setDice, advanceReroll,
-  scoreCategory, bonusEarned, totalScore, NUM_CATEGORIES,
+  scoreCategory, bonusEarned, totalScore, NUM_CATEGORIES, applyHold,
 } from "./state";
 
 describe("initialGameState", () => {
@@ -35,6 +35,44 @@ describe("advanceReroll", () => {
   it("never goes below 0", () => {
     let s = initialGameState();
     s = advanceReroll(advanceReroll(advanceReroll(s)));
+    expect(s.rerollsLeft).toBe(0);
+  });
+});
+
+describe("applyHold", () => {
+  it("keeps dice matching the held values by position and nulls the rest", () => {
+    const s = setDice(initialGameState(), [2, 2, 3, 5, 6]);
+    const next = applyHold(s, [2, 2]);
+    expect(next.dice).toEqual([2, 2, null, null, null]);
+  });
+  it("decrements rerollsLeft", () => {
+    const s = setDice(initialGameState(), [2, 2, 3, 5, 6]);
+    const next = applyHold(s, [2, 2]);
+    expect(next.rerollsLeft).toBe(1);
+  });
+  it("holding all 5 values keeps every die", () => {
+    const s = setDice(initialGameState(), [6, 6, 6, 6, 6]);
+    const next = applyHold(s, [6, 6, 6, 6, 6]);
+    expect(next.dice).toEqual([6, 6, 6, 6, 6]);
+  });
+  it("holding no values clears every die", () => {
+    const s = setDice(initialGameState(), [1, 2, 3, 4, 5]);
+    const next = applyHold(s, []);
+    expect(next.dice).toEqual([null, null, null, null, null]);
+  });
+  it("matches each held value to a distinct die, not the same one repeatedly", () => {
+    const s = setDice(initialGameState(), [3, 3, 3, 5, 6]);
+    const next = applyHold(s, [3, 3]);
+    expect(next.dice.filter((d) => d === 3)).toEqual([3, 3]);
+    expect(next.dice.filter((d) => d === null)).toHaveLength(3);
+  });
+  it("never goes below 0 rerolls", () => {
+    let s = setDice(initialGameState(), [1, 2, 3, 4, 5]);
+    s = applyHold(s, []);
+    s = setDice(s, [1, 2, 3, 4, 5]);
+    s = applyHold(s, []);
+    s = setDice(s, [1, 2, 3, 4, 5]);
+    s = applyHold(s, []);
     expect(s.rerollsLeft).toBe(0);
   });
 });

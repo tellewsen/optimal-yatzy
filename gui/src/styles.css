@@ -2,6 +2,6 @@ body { font-family: sans-serif; max-width: 480px; margin: 2rem auto; }
 .score-row { display: flex; justify-content: space-between; padding: 2px 0; }
 .die-input { width: 3rem; margin-right: 4px; }
 .option-row { padding: 4px 0; }
-.category-option { display: block; width: 100%; text-align: left; padding: 6px; margin: 4px 0; }
+.category-option, .hold-option { display: block; width: 100%; text-align: left; padding: 6px; margin: 4px 0; }
 #error-banner { color: white; background: #b00020; padding: 8px; margin-top: 8px; }
 #final-total { font-weight: bold; margin-top: 12px; }

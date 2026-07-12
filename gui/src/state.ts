@@ -49,6 +49,20 @@ export function advanceReroll(state: GameState): GameState {
   };
 }
 
+export function applyHold(state: GameState, holdValues: number[]): GameState {
+  const kept = new Array(5).fill(false);
+  for (const value of holdValues) {
+    const idx = state.dice.findIndex((d, i) => d === value && !kept[i]);
+    if (idx !== -1) kept[idx] = true;
+  }
+  const dice = state.dice.map((d, i) => (kept[i] ? d : null));
+  return {
+    ...state,
+    dice,
+    rerollsLeft: Math.max(0, state.rerollsLeft - 1),
+  };
+}
+
 export function scoreCategory(state: GameState, category: number, resultingScore: number): GameState {
   const categoryScores = [...state.categoryScores];
   categoryScores[category] = resultingScore;

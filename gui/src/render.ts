@@ -28,7 +28,8 @@ export function renderRerollsIndicator(state: GameState): void {
 
 export function renderRecommendation(
   result: QueryResult | null,
-  onScoreCategory: (category: number, resultingScore: number) => void
+  onScoreCategory: (category: number, resultingScore: number) => void,
+  onHold: (holdValues: number[]) => void
 ): void {
   const el = document.getElementById("recommendation")!;
   const rerollButton = document.getElementById("reroll-button") as HTMLButtonElement;
@@ -41,12 +42,15 @@ export function renderRecommendation(
 
   if (result.isRerollDecision) {
     rerollButton.disabled = false;
-    el.innerHTML = result.rerollOptions
-      .map(
-        (opt) =>
-          `<div class="option-row">hold [${opt.holdValues.join(",")}] — expected value ${opt.expectedValue.toFixed(2)}</div>`
-      )
-      .join("");
+    el.innerHTML = "";
+    for (const opt of result.rerollOptions) {
+      const button = document.createElement("button");
+      button.className = "hold-option";
+      const stopNote = opt.holdValues.length === 5 ? " (stop rerolling)" : "";
+      button.textContent = `Hold [${opt.holdValues.join(",")}]${stopNote} — expected value ${opt.expectedValue.toFixed(2)}`;
+      button.addEventListener("click", () => onHold(opt.holdValues));
+      el.appendChild(button);
+    }
   } else {
     rerollButton.disabled = true;
     el.innerHTML = "";
