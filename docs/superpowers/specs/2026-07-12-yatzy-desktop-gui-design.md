@@ -13,16 +13,29 @@ enter each roll and get back the optimal move.
 
 - **Windows native app.** You'll be using this while physically playing, not
   from a WSL terminal, so it needs to launch like any normal Windows program.
-- **Tauri** (Rust backend + vanilla TypeScript/HTML/CSS frontend — no JS
-  framework; this is a small single-page tool and a framework would be more
-  machinery than the UI needs).
+- **Tauri** (vanilla TypeScript/HTML/CSS frontend, no JS framework — this is
+  a small single-page tool and a framework would be more machinery than the
+  UI needs). **No custom Rust backend command is needed**: Tauri's
+  `@tauri-apps/plugin-shell` exposes `Command.sidecar(...).execute()`
+  directly to TypeScript, so the frontend builds the CLI args, spawns the
+  sidecar, and parses its JSON output itself. The Rust side (`src-tauri/`)
+  is just Tauri's standard scaffold plus the sidecar's permission/config
+  wiring — no custom command logic to write or test.
 - **The C++ engine is kept as-is and reused, not rewritten.** `yatzy_cpu` gets
   cross-compiled to a native Windows binary (MinGW-w64, from WSL — avoids
   needing Visual Studio installed) and bundled as a **Tauri sidecar binary**
   (Tauri's standard mechanism for shipping and invoking a companion
-  executable). This is exactly the seam the CLI's `--json` mode was built
+  executable, named `yatzy_cpu-<host-target-triple>.exe` per Tauri's
+  convention). This is exactly the seam the CLI's `--json` mode was built
   for. The existing Linux/WSL build of `yatzy_cpu` is untouched and still
   works standalone for CLI use.
+- **Two checkouts of this repo.** Windows refuses to directly execute a
+  binary sitting on the WSL-mounted UNC path (`\\wsl.localhost\...`) — it
+  only runs from a native Windows path. This repo (WSL-hosted) stays the
+  source of truth; a second checkout lives on the Windows filesystem (e.g.
+  `C:\Users\<you>\projects\optimal-yatzy`), and that's where the actual
+  `npm run tauri dev`/`build` happens. Normal git workflow keeps them in
+  sync.
 
 ## Scope
 
@@ -41,8 +54,14 @@ the lower-section subtotal, and the grand total.
 
 **Turn panel** — five dice-value inputs (1–6 each) and a rerolls-remaining
 indicator that steps 2 → 1 → 0. Whenever all 5 dice inputs hold valid values,
-the app automatically invokes the backend's `get_recommendation` command (no
-extra button click) and renders one of two result views:
+the app automatically calls the sidecar and renders one of two result views
+(no extra button click to trigger the query itself). A single **"Reroll →"**
+button (visible whenever rerolls remain) advances rerolls-remaining down by
+one and clears the dice inputs for the next roll — there's no separate "stop
+rerolling" action; if you're holding everything, you just retype the same 5
+values on the next roll, and the ranked list already reflects that holding
+everything is correctly modeled as continuing to the next decision point,
+not skipping straight to scoring:
 
 - **Rerolls remaining > 0:** a ranked list of "hold these values, reroll the
   rest" options, each with its expected value, including the "hold all 5 /
@@ -63,16 +82,17 @@ including the bonus if earned.
    are filled), each filled category's recorded score, the running upper
    total, and the current turn's dice values + rerolls-remaining.
 2. On every dice-input change where all 5 values are valid, the frontend
-   calls the Rust `get_recommendation(state)` Tauri command.
-3. The Rust command translates that state into `yatzy_cpu` CLI args
-   (`--used`, `--upper`, `--dice`, `--rerolls`, `--json`), spawns the bundled
-   sidecar binary, parses its JSON stdout, and returns the parsed
-   `QueryResult` (reroll options or category options) to the frontend.
+   builds the `yatzy_cpu` CLI args (`--used`, `--upper`, `--dice`,
+   `--rerolls`, `--json`) from that state, via a pure function.
+3. The frontend calls `Command.sidecar('binaries/yatzy_cpu', args).execute()`
+   (from `@tauri-apps/plugin-shell`), then parses the JSON from its stdout,
+   via another pure function, into the reroll-options or category-options
+   shape.
 4. The frontend renders the result. Choosing a category option updates the
    scorecard state and resets the turn state for the next roll. Choosing a
    reroll option is purely advisory (informs what you do with the physical
    dice) and does not itself change any state — you drive state forward only
-   by entering new dice values or by scoring a category.
+   by entering new dice values, clicking "Reroll →", or scoring a category.
 
 ## Error handling
 
@@ -84,25 +104,38 @@ needed.
 
 ## Testing
 
-- **Rust backend:** an integration-style test that invokes the real bundled
-  sidecar binary with known arguments and asserts on the parsed result —
-  consistent with this project's existing preference for exercising real
-  behavior over mocking the subprocess boundary. The DP cache makes repeat
-  invocations fast after the first solve.
-- **Frontend:** unit tests for the pure game-state-transition logic (e.g.
-  "given the current scorecard state and a chosen category, produce the next
-  state") — this logic has no dependency on a real browser or Tauri runtime
-  and can be tested in isolation.
+Calling the real sidecar requires a running Tauri app (the `Command.sidecar`
+API only works through Tauri's IPC bridge), so it isn't something a plain
+Node-based unit test can exercise directly. Testing instead targets the pure
+logic around that call, plus a manual end-to-end pass for the call itself:
+
+- **Frontend unit tests** (no Tauri runtime needed):
+  - Game-state-transition logic (e.g. "given the current scorecard state and
+    a chosen category, produce the next state").
+  - CLI-args-building logic (e.g. "given this game state, produce exactly
+    these `--used`/`--upper`/`--dice`/`--rerolls`/`--json` args").
+  - JSON-result-parsing logic (e.g. "given this raw sidecar stdout string,
+    produce this typed reroll-options or category-options result").
 - **Manual verification:** launch the actual dev build and play one full
-  15-turn game by hand before considering this done. A GUI's real proof is
-  driving it end-to-end, not just passing unit tests.
+  15-turn game by hand before considering this done. This is what actually
+  proves the sidecar spawn + real engine output works end-to-end, and it's
+  what proves the rendered UI itself (which no automated test here touches)
+  is usable — a GUI's real proof is driving it, not just passing unit tests.
 
 ## Build/packaging
 
-- Cross-compile `yatzy_cpu` for Windows via MinGW-w64 from WSL, producing
-  `yatzy_cpu.exe`, placed where Tauri's sidecar configuration expects it.
+- Cross-compile `yatzy_cpu` for Windows via the `g++-mingw-w64-x86-64-posix`
+  toolchain (the POSIX threading variant — required for `std::thread`
+  support; the `win32` variant lacks it) from WSL, producing a binary named
+  `yatzy_cpu-<host-target-triple>.exe` (the target triple comes from running
+  `rustc --print host-tuple` on the Windows side — confirmed to be
+  `x86_64-pc-windows-msvc` for this machine's Rust install, even though the
+  binary itself is built with a different, unrelated toolchain — Tauri only
+  cares about the filename matching its own build's target triple, not how
+  the sidecar was compiled), placed in `src-tauri/binaries/` on the Windows
+  checkout.
 - `npm run tauri dev` for iteration, `npm run tauri build` to produce the
-  distributable Windows app.
+  distributable Windows app — both run from the Windows-native checkout.
 - No changes to the existing Linux/WSL build of `yatzy_cpu`, its Makefile
   targets, or any of the prior phase's code.
 
