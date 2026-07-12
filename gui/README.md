@@ -1,7 +1,63 @@
-# Tauri + Vanilla TS
+# Yatzy Desktop GUI
 
-This template should help get you started developing with Tauri in vanilla HTML, CSS and Typescript.
+A Windows desktop app for standard (5-dice, Scandinavian-rules) Yatzy: enter
+your rolls during a real game and get the optimal move back, powered by the
+`yatzy_cpu` DP engine from the repo root (built for this app via
+`scripts/build-sidecar.sh`, no engine logic duplicated here).
 
-## Recommended IDE Setup
+## Using it
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+1. Enter your 5 dice values (1-6) in the boxes, or click "🎲 Roll remaining
+   dice" to randomize whichever slots aren't currently held.
+2. Once all 5 are filled, the app calls the engine and shows either:
+   - a list of **reroll options** ("Hold [...] — expected value ..."), or
+   - a list of **category options** once rerolls are exhausted.
+3. Click the option you want. Clicking a reroll option keeps those dice and
+   clears the rest for you to physically re-roll and re-enter. Clicking a
+   category option scores that turn and starts the next one.
+4. "New Game" resets the scorecard at any point.
+
+The very first query in a session solves the DP fresh (a couple of minutes);
+after that it's loaded from a cached table (`yatzy_cpu_dp.bin`, ~8MB) in
+Tauri's app-data directory, so it's near-instant on every later query and
+every future app launch.
+
+## Rebuilding the sidecar
+
+After any change to `yatzy_engine.cpp`, `yatzy_cpu.cpp`, or `precompute_std.h`
+in the repo root:
+
+```bash
+./scripts/build-sidecar.sh
+```
+
+## Developing/running on Windows
+
+Windows can't execute a binary sitting on this repo's WSL UNC path, so sync
+to a native Windows folder first:
+
+```bash
+./scripts/sync-to-windows.sh
+```
+
+Then, from Windows (PowerShell, or via `powershell.exe` from WSL):
+
+```powershell
+cd C:\Users\<you>\yatzy-gui-build
+npm install
+npm run tauri dev    # iterate
+npm run tauri build   # produce a distributable
+```
+
+## Testing
+
+Pure logic (game-state transitions, CLI-arg building, JSON-result parsing)
+has unit tests, runnable directly in WSL (no Windows/Tauri needed):
+
+```bash
+npm test
+```
+
+The sidecar call itself and the rendered UI require a running Tauri app on
+Windows (`Command.sidecar` only works through Tauri's IPC bridge) — verify
+those by playing a full game in `npm run tauri dev`.
