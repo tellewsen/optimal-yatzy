@@ -2,6 +2,7 @@
 // query() recommendation engine for standard Yatzy.
 #include "precompute_std.h"
 #include "yatzy_engine.h"
+#include <array>
 #include <cassert>
 #include <chrono>
 #include <cstdio>
@@ -53,9 +54,28 @@ void test_dp_cache_roundtrip() {
     printf("test_dp_cache_roundtrip: passed\n");
 }
 
+void test_category_recommendation() {
+    FlatTables t = buildFlatTables();
+    std::vector<float> dp = loadOrSolveDP(t, "test_dp_cache_shared.bin");
+
+    // Only Yatzy (14) and Chance (13) open; a rolled Yatzy should recommend
+    // scoring the Yatzy category over Chance.
+    int usedMask = (int)FullMask & ~((1 << CatYatzy) | (1 << CatChance));
+    std::array<int,5> dice = {6,6,6,6,6};
+    QueryResult r = query(t, dp, usedMask, 0, dice, 0);
+
+    assert(!r.isRerollDecision);
+    assert(r.categoryOptions.size() == 2);
+    assert(r.categoryOptions[0].category == CatYatzy);
+    assert(r.categoryOptions[0].resultingScore == 50);
+
+    printf("test_category_recommendation: passed\n");
+}
+
 int main() {
     test_full_game_ev();
     test_dp_cache_roundtrip();
+    test_category_recommendation();
     printf("test_yatzy_engine: all tests passed\n");
     return 0;
 }
