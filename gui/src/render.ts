@@ -60,6 +60,13 @@ export function renderRecommendation(
   }
 }
 
+export function renderComputing(): void {
+  const el = document.getElementById("recommendation")!;
+  const rerollButton = document.getElementById("reroll-button") as HTMLButtonElement;
+  el.innerHTML = `<div class="option-row">Computing recommendation… (the first solve for a fresh dice/state combo can take a couple of minutes)</div>`;
+  rerollButton.disabled = true;
+}
+
 export function renderError(message: string | null): void {
   const el = document.getElementById("error-banner")!;
   if (message) {

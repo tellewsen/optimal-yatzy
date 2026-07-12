@@ -6,7 +6,7 @@ import { getRecommendation } from "./sidecar";
 import { QueryResult } from "./parseResult";
 import {
   renderScorecard, renderRerollsIndicator, renderRecommendation, renderError,
-  renderFinalTotal, renderDiceInputs,
+  renderFinalTotal, renderDiceInputs, renderComputing,
 } from "./render";
 
 let state: GameState = initialGameState();
@@ -20,20 +20,41 @@ function renderAll(): void {
   renderDiceInputs(state.dice, handleDiceChange);
 }
 
+// Only one sidecar call runs at a time. Each solve is a real DP computation
+// that can take minutes on a cold cache, so firing one per keystroke would
+// pile up concurrent subprocesses. Edits that arrive while a call is in
+// flight are coalesced into a single trailing re-query against the latest
+// state once the current call finishes.
+let queryInFlight = false;
+let queryQueued = false;
+
 async function maybeQuery(): Promise<void> {
-  if (!allDiceValid(state.dice)) {
-    lastResult = null;
-    renderAll();
+  if (queryInFlight) {
+    queryQueued = true;
     return;
   }
+  queryInFlight = true;
   try {
-    lastResult = await getRecommendation(state, state.dice as number[]);
-    renderError(null);
-  } catch (err) {
-    lastResult = null;
-    renderError(err instanceof Error ? err.message : String(err));
+    do {
+      queryQueued = false;
+      if (!allDiceValid(state.dice)) {
+        lastResult = null;
+        renderAll();
+        continue;
+      }
+      renderComputing();
+      try {
+        lastResult = await getRecommendation(state, state.dice as number[]);
+        renderError(null);
+      } catch (err) {
+        lastResult = null;
+        renderError(err instanceof Error ? err.message : String(err));
+      }
+      renderAll();
+    } while (queryQueued);
+  } finally {
+    queryInFlight = false;
   }
-  renderAll();
 }
 
 function handleDiceChange(index: number, value: number | null): void {
