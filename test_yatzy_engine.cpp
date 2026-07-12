@@ -72,10 +72,32 @@ void test_category_recommendation() {
     printf("test_category_recommendation: passed\n");
 }
 
+void test_reroll_recommendation() {
+    FlatTables t = buildFlatTables();
+    std::vector<float> dp = loadOrSolveDP(t, "test_dp_cache_shared.bin");
+
+    // Only Yatzy open, already rolled a Yatzy (6,6,6,6,6): holding all 5
+    // dice must be the top-ranked choice for both reroll counts, since
+    // rerolling can only ever match or destroy the Yatzy, never improve it.
+    int usedMask = (int)FullMask & ~(1 << CatYatzy);
+    std::array<int,5> dice = {6,6,6,6,6};
+
+    for (int rerollsLeft : {2, 1}) {
+        QueryResult r = query(t, dp, usedMask, 0, dice, rerollsLeft);
+        assert(r.isRerollDecision);
+        assert(!r.rerollOptions.empty());
+        assert(r.rerollOptions[0].heldValues.size() == 5);
+    }
+
+    std::remove("test_dp_cache_shared.bin");
+    printf("test_reroll_recommendation: passed\n");
+}
+
 int main() {
     test_full_game_ev();
     test_dp_cache_roundtrip();
     test_category_recommendation();
+    test_reroll_recommendation();
     printf("test_yatzy_engine: all tests passed\n");
     return 0;
 }
