@@ -108,7 +108,7 @@ export function renderDiceInputs(
       input.addEventListener("input", () => {
         const raw = input.value.trim();
         const value = raw === "" ? null : Number(raw);
-        onChange(i, value !== null && value >= 1 && value <= 6 ? value : null);
+        onChange(i, value !== null && Number.isInteger(value) && value >= 1 && value <= 6 ? value : null);
       });
       el.appendChild(input);
     }

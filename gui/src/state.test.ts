@@ -23,6 +23,9 @@ describe("allDiceValid", () => {
   it("is false if a value is out of range", () => {
     expect(allDiceValid([1, 2, 3, 4, 7])).toBe(false);
   });
+  it("is false if a value is not an integer", () => {
+    expect(allDiceValid([1, 2, 3, 4, 5.5])).toBe(false);
+  });
 });
 
 describe("advanceReroll", () => {

@@ -34,7 +34,7 @@ export function isGameComplete(state: GameState): boolean {
 }
 
 export function allDiceValid(dice: (number | null)[]): dice is number[] {
-  return dice.length === 5 && dice.every((d) => d !== null && d >= 1 && d <= 6);
+  return dice.length === 5 && dice.every((d) => d !== null && Number.isInteger(d) && d >= 1 && d <= 6);
 }
 
 export function setDice(state: GameState, dice: (number | null)[]): GameState {
