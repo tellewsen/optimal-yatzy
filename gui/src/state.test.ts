@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   initialGameState, isGameComplete, allDiceValid, setDice, advanceReroll,
-  scoreCategory, bonusEarned, totalScore, NUM_CATEGORIES, applyHold,
+  scoreCategory, bonusEarned, totalScore, NUM_CATEGORIES, applyHold, rollRemaining,
 } from "./state";
 
 describe("initialGameState", () => {
@@ -74,6 +74,26 @@ describe("applyHold", () => {
     s = setDice(s, [1, 2, 3, 4, 5]);
     s = applyHold(s, []);
     expect(s.rerollsLeft).toBe(0);
+  });
+});
+
+describe("rollRemaining", () => {
+  it("leaves held (non-null) dice untouched", () => {
+    const result = rollRemaining([2, null, 4, null, null], () => 0);
+    expect(result[0]).toBe(2);
+    expect(result[2]).toBe(4);
+  });
+  it("fills null slots using the provided random source, mapped to 1-6", () => {
+    const result = rollRemaining([null, null, null, null, null], () => 0);
+    expect(result).toEqual([1, 1, 1, 1, 1]);
+  });
+  it("maps a random source near 1 to 6, not 7", () => {
+    const result = rollRemaining([null], () => 0.9999);
+    expect(result).toEqual([6]);
+  });
+  it("defaults to Math.random when no random source is given", () => {
+    const result = rollRemaining([null, null, null, null, null]);
+    expect(result.every((d) => d !== null && d >= 1 && d <= 6)).toBe(true);
   });
 });
 

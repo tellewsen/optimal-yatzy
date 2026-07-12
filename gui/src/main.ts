@@ -1,6 +1,7 @@
 // main.ts — wires game state, sidecar calls, and rendering together.
 import {
-  initialGameState, setDice, advanceReroll, scoreCategory, applyHold, allDiceValid, GameState,
+  initialGameState, setDice, advanceReroll, scoreCategory, applyHold, rollRemaining,
+  allDiceValid, GameState,
 } from "./state";
 import { getRecommendation } from "./sidecar";
 import { QueryResult } from "./parseResult";
@@ -86,5 +87,12 @@ function handleReroll(): void {
   renderAll();
 }
 
+function handleRollRemaining(): void {
+  state = setDice(state, rollRemaining(state.dice));
+  renderAll();
+  void maybeQuery();
+}
+
 document.getElementById("reroll-button")!.addEventListener("click", handleReroll);
+document.getElementById("roll-remaining-button")!.addEventListener("click", handleRollRemaining);
 renderAll();

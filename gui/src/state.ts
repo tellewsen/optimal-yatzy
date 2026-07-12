@@ -63,6 +63,13 @@ export function applyHold(state: GameState, holdValues: number[]): GameState {
   };
 }
 
+export function rollRemaining(
+  dice: (number | null)[],
+  randomFn: () => number = Math.random
+): (number | null)[] {
+  return dice.map((d) => (d === null ? Math.floor(randomFn() * 6) + 1 : d));
+}
+
 export function scoreCategory(state: GameState, category: number, resultingScore: number): GameState {
   const categoryScores = [...state.categoryScores];
   categoryScores[category] = resultingScore;
