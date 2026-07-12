@@ -3,6 +3,7 @@
 #include "precompute_std.h"
 #include "yatzy_engine.h"
 #include <cassert>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -25,14 +26,28 @@ void test_dp_cache_roundtrip() {
     const std::string path = "test_dp_cache_roundtrip.bin";
     std::remove(path.c_str());
 
+    auto t0 = std::chrono::steady_clock::now();
     std::vector<float> dp1 = loadOrSolveDP(t, path);
+    auto t1 = std::chrono::steady_clock::now();
+    double firstSeconds = std::chrono::duration<double>(t1 - t0).count();
+
     FILE* f = fopen(path.c_str(), "rb");
     assert(f != nullptr);
     fclose(f);
 
+    auto t2 = std::chrono::steady_clock::now();
     std::vector<float> dp2 = loadOrSolveDP(t, path);
+    auto t3 = std::chrono::steady_clock::now();
+    double secondSeconds = std::chrono::duration<double>(t3 - t2).count();
+
     assert(dp1.size() == dp2.size());
     for (size_t i = 0; i < dp1.size(); i++) assert(dp1[i] == dp2[i]);
+
+    printf("cache roundtrip: first solve %.2fs, second (cached) load %.2fs\n", firstSeconds, secondSeconds);
+    // The cached load must be dramatically faster than the fresh solve —
+    // this is what actually proves the cache path was taken, not just that
+    // solveDP is deterministic.
+    assert(secondSeconds < firstSeconds / 10.0);
 
     std::remove(path.c_str());
     printf("test_dp_cache_roundtrip: passed\n");
