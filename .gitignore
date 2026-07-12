@@ -17,3 +17,9 @@ test_dp_cache_shared.bin
 # Windows zone-identifier alternate-data streams (from files copied over from Windows)
 *:Zone.Identifier
 *:sec.endpointdlp
+
+# Tauri desktop GUI build artifacts
+gui/node_modules/
+gui/dist/
+gui/src-tauri/target/
+gui/src-tauri/binaries/
