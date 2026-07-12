@@ -29,13 +29,15 @@ enter each roll and get back the optimal move.
   convention). This is exactly the seam the CLI's `--json` mode was built
   for. The existing Linux/WSL build of `yatzy_cpu` is untouched and still
   works standalone for CLI use.
-- **Two checkouts of this repo.** Windows refuses to directly execute a
-  binary sitting on the WSL-mounted UNC path (`\\wsl.localhost\...`) — it
-  only runs from a native Windows path. This repo (WSL-hosted) stays the
-  source of truth; a second checkout lives on the Windows filesystem (e.g.
-  `C:\Users\<you>\projects\optimal-yatzy`), and that's where the actual
-  `npm run tauri dev`/`build` happens. Normal git workflow keeps them in
-  sync.
+- **Synced build-staging copy, not a second checkout.** Windows refuses to
+  directly execute a binary sitting on the WSL-mounted UNC path
+  (`\\wsl.localhost\...`) — it only runs from a native Windows path. This
+  repo (WSL-hosted, under `gui/`) stays the sole source of truth; a small
+  `rsync` script copies `gui/` to a disposable native-Windows build-staging
+  folder (excluding `node_modules`/`target`/`dist`, which are regenerated
+  there fresh), and that's where `npm run tauri dev`/`build` actually run.
+  No second git checkout, no git-sync complexity — just a one-way file copy,
+  re-run whenever there's something new to build or test on Windows.
 
 ## Scope
 
@@ -132,10 +134,12 @@ logic around that call, plus a manual end-to-end pass for the call itself:
   `x86_64-pc-windows-msvc` for this machine's Rust install, even though the
   binary itself is built with a different, unrelated toolchain — Tauri only
   cares about the filename matching its own build's target triple, not how
-  the sidecar was compiled), placed in `src-tauri/binaries/` on the Windows
-  checkout.
+  the sidecar was compiled), placed in `gui/src-tauri/binaries/` in this
+  repo, synced along with the rest of `gui/` to the Windows build-staging
+  folder.
 - `npm run tauri dev` for iteration, `npm run tauri build` to produce the
-  distributable Windows app — both run from the Windows-native checkout.
+  distributable Windows app — both run from the synced Windows build-staging
+  folder.
 - No changes to the existing Linux/WSL build of `yatzy_cpu`, its Makefile
   targets, or any of the prior phase's code.
 
