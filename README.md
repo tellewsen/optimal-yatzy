@@ -60,3 +60,31 @@ change `scoreFullStraight()` if your house rules differ).
 
 Just re-run `./maxi_solver_gpu` — it checks for `checkpoint_maxi_gpu.bin` and resumes
 from the last completed popcount level automatically.
+
+## Standard Yatzy (CPU)
+
+A second, fully independent solver for standard 5-dice Scandinavian Yatzy
+(15 categories, upper bonus +50 at 63) lives alongside the Maxi/GPU code:
+`precompute_std.h`, `yatzy_engine.h`/`.cpp`, `yatzy_cpu.cpp`. No GPU
+required — plain CPU with `std::thread` parallelism.
+
+Build and test:
+```
+make yatzy_cpu
+make test_yatzy
+```
+
+Query the optimal move for a given game state:
+```
+./yatzy_cpu --used 0,3,7 --upper 12 --dice 2,2,3,5,6 --rerolls 2
+```
+
+- `--used`: comma-separated indices of categories already scored (run
+  `./yatzy_cpu` with no args to see the full index list)
+- `--upper`: running upper-section total so far
+- `--dice`: the 5 dice currently showing
+- `--rerolls`: rerolls remaining this turn (2, 1, or 0)
+- `--json`: machine-parseable output instead of the human-readable table
+
+The DP solve runs once and caches its result to `yatzy_cpu_dp.bin`; later
+invocations load the cache instead of recomputing.
