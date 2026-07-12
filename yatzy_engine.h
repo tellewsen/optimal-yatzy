@@ -5,6 +5,7 @@
 #include <vector>
 #include <array>
 #include <string>
+#include <cstdio>
 
 constexpr long long FullMask = (1LL << NumCats) - 1;
 
@@ -13,6 +14,13 @@ constexpr long long FullMask = (1LL << NumCats) - 1;
 // so far (0..CapScore). Runs on CPU with std::thread parallelism across
 // masks within each popcount level; may take up to a couple of minutes.
 std::vector<float> solveDP(const FlatTables& t);
+
+bool saveDP(const std::vector<float>& dp, const std::string& path);
+bool loadDP(std::vector<float>& dp, const std::string& path, size_t expectedSize);
+
+// Loads dp from `path` if present and the right size; otherwise solves it
+// and saves it there for next time.
+std::vector<float> loadOrSolveDP(const FlatTables& t, const std::string& path);
 
 struct RerollOption {
     std::vector<int> heldValues; // sorted dice values kept; reroll the rest

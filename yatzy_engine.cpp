@@ -116,6 +116,36 @@ std::vector<float> solveDP(const FlatTables& t) {
     return dp;
 }
 
+bool saveDP(const std::vector<float>& dp, const std::string& path) {
+    FILE* f = fopen(path.c_str(), "wb");
+    if (!f) return false;
+    size_t n = dp.size();
+    fwrite(&n, sizeof(size_t), 1, f);
+    fwrite(dp.data(), sizeof(float), n, f);
+    fclose(f);
+    return true;
+}
+
+bool loadDP(std::vector<float>& dp, const std::string& path, size_t expectedSize) {
+    FILE* f = fopen(path.c_str(), "rb");
+    if (!f) return false;
+    size_t n = 0;
+    if (fread(&n, sizeof(size_t), 1, f) != 1 || n != expectedSize) { fclose(f); return false; }
+    dp.resize(n);
+    size_t read = fread(dp.data(), sizeof(float), n, f);
+    fclose(f);
+    return read == n;
+}
+
+std::vector<float> loadOrSolveDP(const FlatTables& t, const std::string& path) {
+    size_t expectedSize = ((size_t)1 << NumCats) * (size_t)(CapScore + 1);
+    std::vector<float> dp;
+    if (loadDP(dp, path, expectedSize)) return dp;
+    dp = solveDP(t);
+    saveDP(dp, path);
+    return dp;
+}
+
 QueryResult query(const FlatTables& t, const std::vector<float>& dp,
                    int usedMask, int upperTotal, const std::array<int,5>& dice,
                    int rerollsLeft) {
