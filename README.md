@@ -85,6 +85,7 @@ Query the optimal move for a given game state:
 - `--dice`: the 5 dice currently showing
 - `--rerolls`: rerolls remaining this turn (2, 1, or 0)
 - `--json`: machine-parseable output instead of the human-readable table
+- `--dp-cache`: override the DP cache file path (default `yatzy_cpu_dp.bin`)
 
-The DP solve runs once and caches its result to `yatzy_cpu_dp.bin`; later
+The DP solve runs once and caches its result to the configured cache file; later
 invocations load the cache instead of recomputing.
