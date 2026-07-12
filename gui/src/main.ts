@@ -93,6 +93,14 @@ function handleRollRemaining(): void {
   void maybeQuery();
 }
 
+function handleNewGame(): void {
+  state = initialGameState();
+  lastResult = null;
+  renderError(null);
+  renderAll();
+}
+
 document.getElementById("reroll-button")!.addEventListener("click", handleReroll);
 document.getElementById("roll-remaining-button")!.addEventListener("click", handleRollRemaining);
+document.getElementById("new-game-button")!.addEventListener("click", handleNewGame);
 renderAll();
