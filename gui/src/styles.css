@@ -181,3 +181,58 @@ body {
 .reroll-dot-filled {
   background: var(--dot-filled);
 }
+
+.option-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  margin: 4px 0;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.option-card:hover {
+  background: #f6ecd4;
+}
+
+.option-card.best-option {
+  border-color: var(--gold);
+  background: var(--gold-bg);
+}
+
+.best-badge {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+.computing-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: 0.9rem;
+}
+
+.computing-die {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--primary);
+  animation: computing-pulse 1s ease-in-out infinite;
+}
+
+@keyframes computing-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); }
+}

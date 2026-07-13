@@ -32,6 +32,8 @@ export function renderRerollsIndicator(state: GameState): void {
   el.setAttribute("aria-label", `Rerolls left: ${state.rerollsLeft}`);
 }
 
+const BEST_BADGE = `<span class="best-badge">★ Best move</span>`;
+
 export function renderRecommendation(
   result: QueryResult | null,
   onScoreCategory: (category: number, resultingScore: number) => void,
@@ -49,31 +51,33 @@ export function renderRecommendation(
   if (result.isRerollDecision) {
     rerollButton.disabled = false;
     el.innerHTML = "";
-    for (const opt of result.rerollOptions) {
+    result.rerollOptions.forEach((opt, index) => {
       const button = document.createElement("button");
-      button.className = "hold-option";
+      button.className = `option-card${index === 0 ? " best-option" : ""}`;
       const stopNote = opt.holdValues.length === 5 ? " (stop rerolling)" : "";
-      button.textContent = `Hold [${opt.holdValues.join(",")}]${stopNote} — expected value ${opt.expectedValue.toFixed(2)}`;
+      const badge = index === 0 ? BEST_BADGE : "";
+      button.innerHTML = `${badge}<span class="option-text">Hold [${opt.holdValues.join(",")}]${stopNote} — expected value ${opt.expectedValue.toFixed(2)}</span>`;
       button.addEventListener("click", () => onHold(opt.holdValues));
       el.appendChild(button);
-    }
+    });
   } else {
     rerollButton.disabled = true;
     el.innerHTML = "";
-    for (const opt of result.categoryOptions) {
+    result.categoryOptions.forEach((opt, index) => {
       const button = document.createElement("button");
-      button.className = "category-option";
-      button.textContent = `${opt.categoryName} — score ${opt.resultingScore} (expected value ${opt.expectedValue.toFixed(2)})`;
+      button.className = `option-card${index === 0 ? " best-option" : ""}`;
+      const badge = index === 0 ? BEST_BADGE : "";
+      button.innerHTML = `${badge}<span class="option-text">${opt.categoryName} — score ${opt.resultingScore} (expected value ${opt.expectedValue.toFixed(2)})</span>`;
       button.addEventListener("click", () => onScoreCategory(opt.category, opt.resultingScore));
       el.appendChild(button);
-    }
+    });
   }
 }
 
 export function renderComputing(): void {
   const el = document.getElementById("recommendation")!;
   const rerollButton = document.getElementById("reroll-button") as HTMLButtonElement;
-  el.innerHTML = `<div class="option-row">Computing recommendation… (the first solve for a fresh dice/state combo can take a couple of minutes)</div>`;
+  el.innerHTML = `<div class="computing-row"><span class="computing-die"></span>Computing recommendation… (the first solve for a fresh dice/state combo can take a couple of minutes)</div>`;
   rerollButton.disabled = true;
 }
 
