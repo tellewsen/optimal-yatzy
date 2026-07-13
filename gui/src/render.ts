@@ -23,7 +23,13 @@ export function renderScorecard(state: GameState): void {
 }
 
 export function renderRerollsIndicator(state: GameState): void {
-  document.getElementById("rerolls-indicator")!.textContent = `Rerolls left: ${state.rerollsLeft}`;
+  const el = document.getElementById("rerolls-indicator")!;
+  const dots = [0, 1].map((i) => {
+    const filled = i < state.rerollsLeft;
+    return `<span class="reroll-dot${filled ? " reroll-dot-filled" : ""}"></span>`;
+  });
+  el.innerHTML = dots.join("");
+  el.setAttribute("aria-label", `Rerolls left: ${state.rerollsLeft}`);
 }
 
 export function renderRecommendation(
