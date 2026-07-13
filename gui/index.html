@@ -4,22 +4,33 @@
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="/src/styles.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri App</title>
+    <title>Yatzy Assistant</title>
   </head>
 
   <body>
     <div id="app">
-      <button id="new-game-button">New Game</button>
-      <section id="scorecard"></section>
-      <section id="turn">
-        <div id="dice-inputs"></div>
-        <button id="roll-remaining-button">🎲 Roll remaining dice</button>
-        <div id="rerolls-indicator"></div>
-        <button id="reroll-button" disabled>Reroll →</button>
-        <div id="recommendation"></div>
-        <div id="error-banner" hidden></div>
-      </section>
-      <div id="final-total" hidden></div>
+      <header class="app-header">
+        <h1 class="app-title">🎲 Yatzy Assistant</h1>
+        <button id="new-game-button" class="btn btn-primary">New Game</button>
+      </header>
+      <main class="game-layout">
+        <section id="scorecard-card" class="card scorecard-card">
+          <h2 class="card-title">Scorecard</h2>
+          <section id="scorecard"></section>
+        </section>
+        <section id="turn-card" class="card turn-card">
+          <h2 class="card-title">This Turn</h2>
+          <div id="dice-inputs" class="dice-row"></div>
+          <div class="turn-actions">
+            <button id="roll-remaining-button" class="btn btn-primary">🎲 Roll remaining dice</button>
+            <div id="rerolls-indicator" class="rerolls-dots"></div>
+          </div>
+          <button id="reroll-button" class="btn btn-primary" disabled>Reroll →</button>
+          <div id="recommendation" class="recommendation-list"></div>
+          <div id="error-banner" class="error-banner" hidden></div>
+        </section>
+      </main>
+      <div id="final-total" class="final-banner" hidden></div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

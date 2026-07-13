@@ -17,14 +17,22 @@ export function renderScorecard(state: GameState): void {
   const bonusText = bonusEarned(state) ? "bonus earned (+50)" : `${state.upperTotal}/63 for bonus`;
   el.innerHTML = `
     ${rows.join("")}
-    <div class="score-row"><strong>Upper total</strong><span>${state.upperTotal} (${bonusText})</span></div>
-    <div class="score-row"><strong>Grand total</strong><span>${totalScore(state)}</span></div>
+    <div class="score-row total-row"><strong>Upper total</strong><span>${state.upperTotal} (${bonusText})</span></div>
+    <div class="score-row total-row"><strong>Grand total</strong><span>${totalScore(state)}</span></div>
   `;
 }
 
 export function renderRerollsIndicator(state: GameState): void {
-  document.getElementById("rerolls-indicator")!.textContent = `Rerolls left: ${state.rerollsLeft}`;
+  const el = document.getElementById("rerolls-indicator")!;
+  const dots = [0, 1].map((i) => {
+    const filled = i < state.rerollsLeft;
+    return `<span class="reroll-dot${filled ? " reroll-dot-filled" : ""}"></span>`;
+  });
+  el.innerHTML = dots.join("");
+  el.setAttribute("aria-label", `Rerolls left: ${state.rerollsLeft}`);
 }
+
+const BEST_BADGE = `<span class="best-badge">★ Best move</span>`;
 
 export function renderRecommendation(
   result: QueryResult | null,
@@ -43,31 +51,33 @@ export function renderRecommendation(
   if (result.isRerollDecision) {
     rerollButton.disabled = false;
     el.innerHTML = "";
-    for (const opt of result.rerollOptions) {
+    result.rerollOptions.forEach((opt, index) => {
       const button = document.createElement("button");
-      button.className = "hold-option";
+      button.className = `option-card${index === 0 ? " best-option" : ""}`;
       const stopNote = opt.holdValues.length === 5 ? " (stop rerolling)" : "";
-      button.textContent = `Hold [${opt.holdValues.join(",")}]${stopNote} — expected value ${opt.expectedValue.toFixed(2)}`;
+      const badge = index === 0 ? BEST_BADGE : "";
+      button.innerHTML = `${badge}<span class="option-text">Hold [${opt.holdValues.join(",")}]${stopNote} — expected value ${opt.expectedValue.toFixed(2)}</span>`;
       button.addEventListener("click", () => onHold(opt.holdValues));
       el.appendChild(button);
-    }
+    });
   } else {
     rerollButton.disabled = true;
     el.innerHTML = "";
-    for (const opt of result.categoryOptions) {
+    result.categoryOptions.forEach((opt, index) => {
       const button = document.createElement("button");
-      button.className = "category-option";
-      button.textContent = `${opt.categoryName} — score ${opt.resultingScore} (expected value ${opt.expectedValue.toFixed(2)})`;
+      button.className = `option-card${index === 0 ? " best-option" : ""}`;
+      const badge = index === 0 ? BEST_BADGE : "";
+      button.innerHTML = `${badge}<span class="option-text">${opt.categoryName} — score ${opt.resultingScore} (expected value ${opt.expectedValue.toFixed(2)})</span>`;
       button.addEventListener("click", () => onScoreCategory(opt.category, opt.resultingScore));
       el.appendChild(button);
-    }
+    });
   }
 }
 
 export function renderComputing(): void {
   const el = document.getElementById("recommendation")!;
   const rerollButton = document.getElementById("reroll-button") as HTMLButtonElement;
-  el.innerHTML = `<div class="option-row">Computing recommendation… (the first solve for a fresh dice/state combo can take a couple of minutes)</div>`;
+  el.innerHTML = `<div class="computing-row"><span class="computing-die"></span>Computing recommendation… (the first solve for a fresh dice/state combo can take a couple of minutes)</div>`;
   rerollButton.disabled = true;
 }
 
@@ -86,11 +96,20 @@ export function renderFinalTotal(state: GameState): void {
   const el = document.getElementById("final-total")!;
   if (isGameComplete(state)) {
     el.hidden = false;
-    el.textContent = `Game complete! Final score: ${totalScore(state)}`;
+    el.textContent = `🎉 Game complete! Final score: ${totalScore(state)}`;
   } else {
     el.hidden = true;
   }
 }
+
+const PIP_LAYOUTS: Record<number, string[]> = {
+  1: ["mc"],
+  2: ["tl", "br"],
+  3: ["tl", "mc", "br"],
+  4: ["tl", "tr", "bl", "br"],
+  5: ["tl", "tr", "mc", "bl", "br"],
+  6: ["tl", "ml", "bl", "tr", "mr", "br"],
+};
 
 export function renderDiceInputs(
   dice: (number | null)[],
@@ -100,21 +119,27 @@ export function renderDiceInputs(
   if (el.childElementCount !== 5) {
     el.innerHTML = "";
     for (let i = 0; i < 5; i++) {
-      const input = document.createElement("input");
-      input.type = "number";
-      input.min = "1";
-      input.max = "6";
-      input.className = "die-input";
-      input.addEventListener("input", () => {
-        const raw = input.value.trim();
-        const value = raw === "" ? null : Number(raw);
-        onChange(i, value !== null && Number.isInteger(value) && value >= 1 && value <= 6 ? value : null);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "die";
+      // Read the current value from the button's own dataset at click time,
+      // not from the `dice` array captured in this closure — this listener
+      // is created once, but `dice` is a fresh array on every render call,
+      // so closing over it here would cycle from a stale value forever.
+      button.addEventListener("click", () => {
+        const raw = button.dataset.value;
+        const current = raw ? Number(raw) : null;
+        onChange(i, current === null ? 1 : (current % 6) + 1);
       });
-      el.appendChild(input);
+      el.appendChild(button);
     }
   }
-  const inputs = el.querySelectorAll<HTMLInputElement>(".die-input");
-  inputs.forEach((input, i) => {
-    input.value = dice[i] === null ? "" : String(dice[i]);
+  const buttons = el.querySelectorAll<HTMLButtonElement>(".die");
+  buttons.forEach((button, i) => {
+    const value = dice[i];
+    button.dataset.value = value === null ? "" : String(value);
+    button.classList.toggle("die-empty", value === null);
+    const pips = value === null ? [] : PIP_LAYOUTS[value];
+    button.innerHTML = pips.map((pos) => `<span class="pip pip-${pos}"></span>`).join("");
   });
 }
