@@ -96,7 +96,7 @@ export function renderFinalTotal(state: GameState): void {
   const el = document.getElementById("final-total")!;
   if (isGameComplete(state)) {
     el.hidden = false;
-    el.textContent = `Game complete! Final score: ${totalScore(state)}`;
+    el.textContent = `🎉 Game complete! Final score: ${totalScore(state)}`;
   } else {
     el.hidden = true;
   }

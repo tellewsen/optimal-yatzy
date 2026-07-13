@@ -236,3 +236,20 @@ body {
   0%, 100% { opacity: 0.4; transform: scale(0.9); }
   50% { opacity: 1; transform: scale(1.1); }
 }
+
+.error-banner {
+  background: var(--error-bg);
+  color: var(--text-on-felt);
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.final-banner {
+  background: linear-gradient(90deg, var(--gold), #f0c869);
+  color: var(--text);
+  font-weight: 700;
+  text-align: center;
+  padding: 12px;
+  border-radius: 10px;
+}
