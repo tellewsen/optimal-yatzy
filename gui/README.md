@@ -7,8 +7,9 @@ your rolls during a real game and get the optimal move back, powered by the
 
 ## Using it
 
-1. Enter your 5 dice values (1-6) in the boxes, or click "🎲 Roll remaining
-   dice" to randomize whichever slots aren't currently held.
+1. Click each die to cycle it through 1→6 to match what you physically
+   rolled (it wraps back to 1 after 6), or click "🎲 Roll remaining dice" to
+   randomize whichever dice aren't currently held.
 2. Once all 5 are filled, the app calls the engine and shows either:
    - a list of **reroll options** ("Hold [...] — expected value ..."), or
    - a list of **category options** once rerolls are exhausted.

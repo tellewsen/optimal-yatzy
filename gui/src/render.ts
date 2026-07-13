@@ -92,6 +92,15 @@ export function renderFinalTotal(state: GameState): void {
   }
 }
 
+const PIP_LAYOUTS: Record<number, string[]> = {
+  1: ["mc"],
+  2: ["tl", "br"],
+  3: ["tl", "mc", "br"],
+  4: ["tl", "tr", "bl", "br"],
+  5: ["tl", "tr", "mc", "bl", "br"],
+  6: ["tl", "ml", "bl", "tr", "mr", "br"],
+};
+
 export function renderDiceInputs(
   dice: (number | null)[],
   onChange: (index: number, value: number | null) => void
@@ -100,21 +109,27 @@ export function renderDiceInputs(
   if (el.childElementCount !== 5) {
     el.innerHTML = "";
     for (let i = 0; i < 5; i++) {
-      const input = document.createElement("input");
-      input.type = "number";
-      input.min = "1";
-      input.max = "6";
-      input.className = "die-input";
-      input.addEventListener("input", () => {
-        const raw = input.value.trim();
-        const value = raw === "" ? null : Number(raw);
-        onChange(i, value !== null && Number.isInteger(value) && value >= 1 && value <= 6 ? value : null);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "die";
+      // Read the current value from the button's own dataset at click time,
+      // not from the `dice` array captured in this closure — this listener
+      // is created once, but `dice` is a fresh array on every render call,
+      // so closing over it here would cycle from a stale value forever.
+      button.addEventListener("click", () => {
+        const raw = button.dataset.value;
+        const current = raw ? Number(raw) : null;
+        onChange(i, current === null ? 1 : (current % 6) + 1);
       });
-      el.appendChild(input);
+      el.appendChild(button);
     }
   }
-  const inputs = el.querySelectorAll<HTMLInputElement>(".die-input");
-  inputs.forEach((input, i) => {
-    input.value = dice[i] === null ? "" : String(dice[i]);
+  const buttons = el.querySelectorAll<HTMLButtonElement>(".die");
+  buttons.forEach((button, i) => {
+    const value = dice[i];
+    button.dataset.value = value === null ? "" : String(value);
+    button.classList.toggle("die-empty", value === null);
+    const pips = value === null ? [] : PIP_LAYOUTS[value];
+    button.innerHTML = pips.map((pos) => `<span class="pip pip-${pos}"></span>`).join("");
   });
 }
