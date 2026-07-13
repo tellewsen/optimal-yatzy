@@ -17,8 +17,8 @@ export function renderScorecard(state: GameState): void {
   const bonusText = bonusEarned(state) ? "bonus earned (+50)" : `${state.upperTotal}/63 for bonus`;
   el.innerHTML = `
     ${rows.join("")}
-    <div class="score-row"><strong>Upper total</strong><span>${state.upperTotal} (${bonusText})</span></div>
-    <div class="score-row"><strong>Grand total</strong><span>${totalScore(state)}</span></div>
+    <div class="score-row total-row"><strong>Upper total</strong><span>${state.upperTotal} (${bonusText})</span></div>
+    <div class="score-row total-row"><strong>Grand total</strong><span>${totalScore(state)}</span></div>
   `;
 }
 

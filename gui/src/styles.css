@@ -104,3 +104,16 @@ body {
   gap: 10px;
   margin: 8px 0;
 }
+
+.score-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 0.95rem;
+}
+
+.score-row.total-row {
+  border-top: 1px solid var(--card-border);
+  margin-top: 6px;
+  padding-top: 6px;
+}
