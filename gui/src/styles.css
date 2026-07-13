@@ -1,7 +1,106 @@
-body { font-family: sans-serif; max-width: 480px; margin: 2rem auto; }
-.score-row { display: flex; justify-content: space-between; padding: 2px 0; }
-.die-input { width: 3rem; margin-right: 4px; }
-.option-row { padding: 4px 0; }
-.category-option, .hold-option { display: block; width: 100%; text-align: left; padding: 6px; margin: 4px 0; }
-#error-banner { color: white; background: #b00020; padding: 8px; margin-top: 8px; }
-#final-total { font-weight: bold; margin-top: 12px; }
+:root {
+  --felt: #1b5e3a;
+  --felt-dark: #164a2e;
+  --card-bg: #fdf8ec;
+  --card-border: #e6dcc3;
+  --text: #2b2016;
+  --text-on-felt: #fdf8ec;
+  --primary: #b3273e;
+  --primary-text: #fdf8ec;
+  --gold: #d4a017;
+  --gold-bg: #fbf0d4;
+  --error-bg: #b00020;
+  --dot-filled: #2b2016;
+  --dot-empty: #cfc4a3;
+  --font-rounded: "Segoe UI Rounded", "SF Pro Rounded", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-rounded);
+  color: var(--text-on-felt);
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at 50% 0%, var(--felt) 0%, var(--felt-dark) 100%);
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 1rem 1.5rem;
+  gap: 1rem;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.btn {
+  font-family: inherit;
+  font-size: 0.95rem;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.game-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  flex: 1;
+}
+
+.card {
+  background: var(--card-bg);
+  color: var(--text);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(43, 32, 22, 0.25);
+  padding: 1rem 1.25rem;
+}
+
+.card-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+}
+
+.scorecard-card {
+  flex: 1 1 320px;
+}
+
+.turn-card {
+  flex: 1 1 380px;
+}
+
+.turn-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+}
