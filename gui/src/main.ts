@@ -1,6 +1,6 @@
 // main.ts — wires match state, sidecar calls, and rendering together.
 import {
-  initialGameState, setDice, advanceReroll, scoreCategory, applyHold, rollRemaining,
+  GameState, initialGameState, setDice, advanceReroll, scoreCategory, applyHold, rollRemaining,
   allDiceValid,
 } from "./state";
 import {
@@ -18,6 +18,9 @@ let match: MatchState = initialMatchState("solo");
 let lastResult: QueryResult | null = null;
 let showHints = true;
 let computerPacing: "instant" | "step" = "instant";
+// Holds the computer's in-progress GameState between clicks of the "Next →"
+// button in step-by-step pacing; null when no step-mode turn is underway.
+let computerStepActive: GameState | null = null;
 
 // Bumped on every state change so an in-flight query can detect that its
 // result is stale (the state it was computed for no longer applies) before
@@ -157,6 +160,7 @@ function closeNewGameModal(): void {
 function startNewGame(mode: Mode): void {
   setMatch(initialMatchState(mode));
   lastResult = null;
+  computerStepActive = null;
   renderError(null);
   renderAll();
   closeNewGameModal();
@@ -211,6 +215,11 @@ async function playComputerTurnInstant(myGeneration: number): Promise<string | n
   }
 }
 
+function describeHold(holdValues: number[], expectedValue: number): string {
+  const stopNote = holdValues.length === 5 ? " (stop rerolling)" : "";
+  return `Hold [${holdValues.join(",")}]${stopNote} — expected value ${expectedValue.toFixed(2)}`;
+}
+
 async function handleComputerTurnInstant(): Promise<void> {
   if (queryInFlight) return;
   queryInFlight = true;
@@ -235,6 +244,56 @@ async function handleComputerTurnInstant(): Promise<void> {
   }
 }
 
+// Step-by-step pacing: one roll/hold/reroll decision per click. In-progress
+// state between clicks lives in computerStepActive; cleared once the turn
+// ends (category scored) or a new game starts.
+async function handleComputerTurnStep(): Promise<void> {
+  if (queryInFlight) return;
+  queryInFlight = true;
+  const myGeneration = generation;
+  try {
+    const active = computerStepActive ?? activeGameState(match);
+    const dice = rollRemaining(active.dice) as number[];
+    renderComputerTurnStatus("Computer is thinking…");
+    const result = await getRecommendation(active, dice, (level, total) => {
+      if (generation === myGeneration) {
+        renderComputerTurnStatus(`Computer is thinking… (level ${level}/${total})`);
+      }
+    });
+    if (generation !== myGeneration) return;
+    if (showHints) {
+      renderRecommendation(result, () => {}, () => {});
+    }
+    if (result.isRerollDecision) {
+      const best = result.rerollOptions[0];
+      computerStepActive = applyHold(setDice(active, dice), best.holdValues);
+      renderComputerTurnStatus(
+        `Rolled [${dice.join(",")}] — ${describeHold(best.holdValues, best.expectedValue)}. Click Next to continue.`
+      );
+    } else {
+      const best = result.categoryOptions[0];
+      const scored = scoreCategory(active, best.category, best.resultingScore);
+      computerStepActive = null;
+      setMatch(afterScore(withActiveGameState(match, scored)));
+      renderComputerTurnStatus(`Rolled [${dice.join(",")}] — scored ${best.categoryName} for ${best.resultingScore} points.`);
+      renderAll();
+    }
+  } catch (err) {
+    renderError(err instanceof Error ? err.message : String(err));
+  } finally {
+    queryInFlight = false;
+    if (queryQueued) void maybeQuery();
+  }
+}
+
+function handleComputerTurnButton(): void {
+  if (computerPacing === "instant") {
+    void handleComputerTurnInstant();
+  } else {
+    void handleComputerTurnStep();
+  }
+}
+
 document.getElementById("reroll-button")!.addEventListener("click", handleReroll);
 document.getElementById("roll-remaining-button")!.addEventListener("click", handleRollRemaining);
 document.getElementById("new-game-button")!.addEventListener("click", openNewGameModal);
@@ -253,7 +312,7 @@ document.getElementById("computer-pacing-select")!.addEventListener("change", (e
   computerPacing = (event.target as HTMLSelectElement).value as "instant" | "step";
   renderAll();
 });
-document.getElementById("computer-turn-button")!.addEventListener("click", () => void handleComputerTurnInstant());
+document.getElementById("computer-turn-button")!.addEventListener("click", handleComputerTurnButton);
 renderAll();
 
 renderWarmUp("checking");
