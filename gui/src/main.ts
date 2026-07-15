@@ -193,6 +193,7 @@ async function handleWarmUp(): Promise<void> {
 // outcome. Returns null if the match moved on (e.g. New Game) mid-turn, in
 // which case the caller must not touch match/UI state.
 async function playComputerTurnInstant(myGeneration: number): Promise<string | null> {
+  computerStepActive = null;
   let active = activeGameState(match);
   for (;;) {
     const dice = rollRemaining(active.dice) as number[];
