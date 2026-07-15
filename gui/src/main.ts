@@ -15,8 +15,8 @@ import {
 
 let match: MatchState = initialMatchState("solo");
 let lastResult: QueryResult | null = null;
-export let showHints = true;
-export let computerPacing: "instant" | "step" = "instant";
+let showHints = true;
+let computerPacing: "instant" | "step" = "instant";
 
 // Bumped on every state change so an in-flight query can detect that its
 // result is stale (the state it was computed for no longer applies) before
