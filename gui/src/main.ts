@@ -15,6 +15,8 @@ import {
 
 let match: MatchState = initialMatchState("solo");
 let lastResult: QueryResult | null = null;
+export let showHints = true;
+export let computerPacing: "instant" | "step" = "instant";
 
 // Bumped on every state change so an in-flight query can detect that its
 // result is stale (the state it was computed for no longer applies) before
@@ -35,7 +37,11 @@ function renderAll(): void {
   }
   renderRerollsIndicator(active);
   renderFinalTotal(match);
-  renderRecommendation(lastResult, handleScoreCategory, handleHold);
+  if (showHints) {
+    renderRecommendation(lastResult, handleScoreCategory, handleHold);
+  } else {
+    renderRecommendation(null, () => {}, () => {});
+  }
   renderDiceInputs(active.dice, handleDiceChange);
 }
 
@@ -178,6 +184,17 @@ document.getElementById("new-game-button")!.addEventListener("click", openNewGam
 document.getElementById("mode-solo-button")!.addEventListener("click", () => startNewGame("solo"));
 document.getElementById("mode-vs-computer-button")!.addEventListener("click", () => startNewGame("vsComputer"));
 document.getElementById("warmup-button")!.addEventListener("click", () => void handleWarmUp());
+document.getElementById("settings-button")!.addEventListener("click", () => {
+  const panel = document.getElementById("settings-panel")!;
+  panel.hidden = !panel.hidden;
+});
+document.getElementById("show-hints-toggle")!.addEventListener("change", (event) => {
+  showHints = (event.target as HTMLInputElement).checked;
+  renderAll();
+});
+document.getElementById("computer-pacing-select")!.addEventListener("change", (event) => {
+  computerPacing = (event.target as HTMLSelectElement).value as "instant" | "step";
+});
 renderAll();
 
 renderWarmUp("checking");

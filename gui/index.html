@@ -11,8 +11,24 @@
     <div id="app">
       <header class="app-header">
         <h1 class="app-title">🎲 Yatzy Assistant</h1>
-        <button id="new-game-button" class="btn btn-primary">New Game</button>
+        <div class="header-actions">
+          <button id="settings-button" class="btn btn-icon" aria-label="Settings">⚙️</button>
+          <button id="new-game-button" class="btn btn-primary">New Game</button>
+        </div>
       </header>
+      <div id="settings-panel" class="settings-panel card" hidden>
+        <label class="settings-row">
+          <input type="checkbox" id="show-hints-toggle" checked />
+          Show optimal move suggestions
+        </label>
+        <label class="settings-row">
+          <span>Computer plays:</span>
+          <select id="computer-pacing-select">
+            <option value="instant">Instantly</option>
+            <option value="step">Step-by-step</option>
+          </select>
+        </label>
+      </div>
       <main id="game-layout" class="game-layout">
         <div id="scorecards-row" class="scorecards-row">
           <section id="scorecard-card" class="card scorecard-card">
