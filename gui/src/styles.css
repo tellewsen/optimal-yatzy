@@ -31,8 +31,10 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding: 1rem 1.5rem;
-  gap: 1rem;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0.75rem 1.25rem;
+  gap: 0.6rem;
 }
 
 .app-header {
@@ -43,7 +45,7 @@ body {
 
 .app-title {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: 1.2rem;
 }
 
 .btn {
@@ -72,8 +74,8 @@ body {
 .game-layout {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  flex: 1;
+  align-items: flex-start;
+  gap: 0.6rem;
 }
 
 .card {
@@ -82,12 +84,12 @@ body {
   border: 1px solid var(--card-border);
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(43, 32, 22, 0.25);
-  padding: 1rem 1.25rem;
+  padding: 0.75rem 1rem;
 }
 
 .card-title {
-  margin: 0 0 0.75rem;
-  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
 }
 
 .scorecard-card {
@@ -102,50 +104,50 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 8px 0;
+  margin: 6px 0;
 }
 
 .score-row {
   display: flex;
   justify-content: space-between;
-  padding: 3px 0;
-  font-size: 0.95rem;
+  padding: 2px 0;
+  font-size: 0.9rem;
 }
 
 .score-row.total-row {
   border-top: 1px solid var(--card-border);
-  margin-top: 6px;
-  padding-top: 6px;
+  margin-top: 4px;
+  padding-top: 4px;
 }
 
 #warmup-button {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .warmup-status {
   display: block;
-  margin-bottom: 0.75rem;
-  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
   color: var(--text);
 }
 
 .dice-row {
   display: flex;
-  gap: 10px;
-  margin-bottom: 0.5rem;
+  gap: 8px;
+  margin-bottom: 0.4rem;
 }
 
 .die {
-  width: 64px;
-  height: 64px;
-  border-radius: 12px;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
   background: var(--card-bg);
   border: 2px solid var(--card-border);
   box-shadow: inset 0 2px 4px rgba(43, 32, 22, 0.15);
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
-  padding: 8px;
+  padding: 6px;
   cursor: pointer;
 }
 
@@ -228,8 +230,8 @@ body {
   gap: 8px;
   width: 100%;
   text-align: left;
-  padding: 8px 10px;
-  margin: 4px 0;
+  padding: 6px 10px;
+  margin: 3px 0;
   border: 1px solid var(--card-border);
   border-radius: 8px;
   background: var(--card-bg);
@@ -237,6 +239,11 @@ body {
   font-family: inherit;
   font-size: 0.9rem;
   cursor: pointer;
+}
+
+.recommendation-list {
+  max-height: 38vh;
+  overflow-y: auto;
 }
 
 .option-card:hover {
@@ -318,7 +325,7 @@ body {
 
 .scorecards-row {
   display: flex;
-  gap: 1rem;
+  gap: 0.6rem;
   flex: 1 1 320px;
 }
 
@@ -353,8 +360,12 @@ body {
 .settings-panel {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 1rem;
+  gap: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.settings-panel[hidden] {
+  display: none;
 }
 
 .settings-row {
