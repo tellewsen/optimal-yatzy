@@ -10,6 +10,13 @@ import { parseQueryResult, QueryResult } from "./parseResult";
 
 const DP_CACHE_FILENAME = "yatzy_cpu_dp.bin";
 
+// __TAURI_INTERNALS__ is injected by the Tauri webview at runtime; it's absent
+// when this app is loaded as a plain page (e.g. `npm run dev` in a browser),
+// in which case every Tauri API call below throws.
+function hasTauriRuntime(): boolean {
+  return "__TAURI_INTERNALS__" in window;
+}
+
 // The DP cache (~8MB) is expensive to rebuild (a couple of minutes on a cold
 // solve) but loads in milliseconds once written. Pin it to the app-data dir
 // so it survives restarts and rebuilds, rather than whatever directory the
@@ -28,6 +35,7 @@ function resolveDpCachePath(): Promise<string> {
 }
 
 export async function isEngineWarm(): Promise<boolean> {
+  if (!hasTauriRuntime()) return false;
   const dpCachePath = await resolveDpCachePath();
   return exists(dpCachePath);
 }
@@ -43,6 +51,9 @@ export async function getRecommendation(
   dice: number[],
   onProgress?: (level: number, total: number) => void
 ): Promise<QueryResult> {
+  if (!hasTauriRuntime()) {
+    throw new Error("The solver sidecar is only available in the Tauri app, not in a plain browser preview.");
+  }
   const dpCachePath = await resolveDpCachePath();
   const args = [...buildCliArgs(state, dice), "--dp-cache", dpCachePath];
   const command = Command.sidecar("binaries/yatzy_cpu", args);
