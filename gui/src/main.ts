@@ -219,10 +219,15 @@ async function handleComputerTurnInstant(): Promise<void> {
     const summary = await playComputerTurnInstant(myGeneration);
     if (summary !== null) {
       renderComputerTurnStatus(summary);
-      renderAll();
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      if (generation === myGeneration) {
+        renderAll();
+      }
     }
   } catch (err) {
-    renderError(err instanceof Error ? err.message : String(err));
+    if (generation === myGeneration) {
+      renderError(err instanceof Error ? err.message : String(err));
+    }
   } finally {
     queryInFlight = false;
     if (queryQueued) void maybeQuery();
