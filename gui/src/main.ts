@@ -4,7 +4,7 @@ import {
   allDiceValid,
 } from "./state";
 import {
-  MatchState, initialMatchState, activeGameState, withActiveGameState, afterScore,
+  MatchState, Mode, initialMatchState, activeGameState, withActiveGameState, afterScore,
 } from "./match";
 import { getRecommendation, isEngineWarm } from "./sidecar";
 import { QueryResult } from "./parseResult";
@@ -131,11 +131,20 @@ function handleRollRemaining(): void {
   void maybeQuery();
 }
 
-function handleNewGame(): void {
-  setMatch(initialMatchState("solo"));
+function openNewGameModal(): void {
+  document.getElementById("new-game-modal")!.hidden = false;
+}
+
+function closeNewGameModal(): void {
+  document.getElementById("new-game-modal")!.hidden = true;
+}
+
+function startNewGame(mode: Mode): void {
+  setMatch(initialMatchState(mode));
   lastResult = null;
   renderError(null);
   renderAll();
+  closeNewGameModal();
 }
 
 // Warming up runs through the same queryInFlight guard as a real dice query
@@ -161,7 +170,9 @@ async function handleWarmUp(): Promise<void> {
 
 document.getElementById("reroll-button")!.addEventListener("click", handleReroll);
 document.getElementById("roll-remaining-button")!.addEventListener("click", handleRollRemaining);
-document.getElementById("new-game-button")!.addEventListener("click", handleNewGame);
+document.getElementById("new-game-button")!.addEventListener("click", openNewGameModal);
+document.getElementById("mode-solo-button")!.addEventListener("click", () => startNewGame("solo"));
+document.getElementById("mode-vs-computer-button")!.addEventListener("click", () => startNewGame("vsComputer"));
 document.getElementById("warmup-button")!.addEventListener("click", () => void handleWarmUp());
 renderAll();
 
