@@ -279,7 +279,9 @@ async function handleComputerTurnStep(): Promise<void> {
       renderAll();
     }
   } catch (err) {
-    renderError(err instanceof Error ? err.message : String(err));
+    if (generation === myGeneration) {
+      renderError(err instanceof Error ? err.message : String(err));
+    }
   } finally {
     queryInFlight = false;
     if (queryQueued) void maybeQuery();
