@@ -1,8 +1,11 @@
-// main.ts — wires game state, sidecar calls, and rendering together.
+// main.ts — wires match state, sidecar calls, and rendering together.
 import {
   initialGameState, setDice, advanceReroll, scoreCategory, applyHold, rollRemaining,
-  allDiceValid, GameState,
+  allDiceValid,
 } from "./state";
+import {
+  MatchState, initialMatchState, activeGameState, withActiveGameState, afterScore,
+} from "./match";
 import { getRecommendation, isEngineWarm } from "./sidecar";
 import { QueryResult } from "./parseResult";
 import {
@@ -10,7 +13,7 @@ import {
   renderFinalTotal, renderDiceInputs, renderComputing, renderWarmUp,
 } from "./render";
 
-let state: GameState = initialGameState();
+let match: MatchState = initialMatchState("solo");
 let lastResult: QueryResult | null = null;
 
 // Bumped on every state change so an in-flight query can detect that its
@@ -18,17 +21,18 @@ let lastResult: QueryResult | null = null;
 // applying it — see maybeQuery.
 let generation = 0;
 
-function setState(next: GameState): void {
-  state = next;
+function setMatch(next: MatchState): void {
+  match = next;
   generation++;
 }
 
 function renderAll(): void {
-  renderScorecard(state);
-  renderRerollsIndicator(state);
-  renderFinalTotal(state);
+  const active = activeGameState(match);
+  renderScorecard("scorecard", match.player, match.mode === "vsComputer" ? match.computer : null);
+  renderRerollsIndicator(active);
+  renderFinalTotal(match);
   renderRecommendation(lastResult, handleScoreCategory, handleHold);
-  renderDiceInputs(state.dice, handleDiceChange);
+  renderDiceInputs(active.dice, handleDiceChange);
 }
 
 // Only one sidecar call runs at a time. Each solve is a real DP computation
@@ -49,14 +53,15 @@ async function maybeQuery(): Promise<void> {
     do {
       queryQueued = false;
       const myGeneration = generation;
-      if (!allDiceValid(state.dice)) {
+      const active = activeGameState(match);
+      if (!allDiceValid(active.dice)) {
         lastResult = null;
         renderAll();
         continue;
       }
       renderComputing();
       try {
-        const result = await getRecommendation(state, state.dice as number[], (level, total) => {
+        const result = await getRecommendation(active, active.dice as number[], (level, total) => {
           if (generation === myGeneration) {
             renderComputing(`level ${level}/${total}`);
           }
@@ -86,20 +91,24 @@ async function maybeQuery(): Promise<void> {
 }
 
 function handleDiceChange(index: number, value: number | null): void {
-  const dice = [...state.dice];
+  const active = activeGameState(match);
+  const dice = [...active.dice];
   dice[index] = value;
-  setState(setDice(state, dice));
+  setMatch(withActiveGameState(match, setDice(active, dice)));
   void maybeQuery();
 }
 
 function handleScoreCategory(category: number, resultingScore: number): void {
-  setState(scoreCategory(state, category, resultingScore));
+  const active = activeGameState(match);
+  const scored = scoreCategory(active, category, resultingScore);
+  setMatch(afterScore(withActiveGameState(match, scored)));
   lastResult = null;
   renderAll();
 }
 
 function handleHold(holdValues: number[]): void {
-  setState(applyHold(state, holdValues));
+  const active = activeGameState(match);
+  setMatch(withActiveGameState(match, applyHold(active, holdValues)));
   lastResult = null;
   renderAll();
   // Holding all 5 dice leaves the roll unchanged and still valid, so this
@@ -109,19 +118,21 @@ function handleHold(holdValues: number[]): void {
 }
 
 function handleReroll(): void {
-  setState(advanceReroll(state));
+  const active = activeGameState(match);
+  setMatch(withActiveGameState(match, advanceReroll(active)));
   lastResult = null;
   renderAll();
 }
 
 function handleRollRemaining(): void {
-  setState(setDice(state, rollRemaining(state.dice)));
+  const active = activeGameState(match);
+  setMatch(withActiveGameState(match, setDice(active, rollRemaining(active.dice))));
   renderAll();
   void maybeQuery();
 }
 
 function handleNewGame(): void {
-  setState(initialGameState());
+  setMatch(initialMatchState("solo"));
   lastResult = null;
   renderError(null);
   renderAll();

@@ -1,17 +1,20 @@
 // render.ts — pure DOM rendering for the scorecard and turn panel. Reads
 // application state and a query result, writes to fixed DOM containers.
 import {
-  GameState, CATEGORY_NAMES, NUM_CATEGORIES, bonusEarned, totalScore, isGameComplete,
+  GameState, CATEGORY_NAMES, NUM_CATEGORIES, bonusEarned, totalScore,
 } from "./state";
+import { MatchState, isMatchComplete, matchWinner, compareCategoryScores } from "./match";
 import { QueryResult } from "./parseResult";
 
-export function renderScorecard(state: GameState): void {
-  const el = document.getElementById("scorecard")!;
+export function renderScorecard(containerId: string, state: GameState, opponent: GameState | null): void {
+  const el = document.getElementById(containerId)!;
   const rows: string[] = [];
   for (let cat = 0; cat < NUM_CATEGORIES; cat++) {
     const score = state.categoryScores[cat];
+    const cmp = opponent ? compareCategoryScores(score, opponent.categoryScores[cat]) : null;
+    const highlightClass = cmp === "a" ? " score-leading" : cmp === "b" ? " score-trailing" : "";
     rows.push(
-      `<div class="score-row"><span>${CATEGORY_NAMES[cat]}</span><span>${score === null ? "—" : score}</span></div>`
+      `<div class="score-row${highlightClass}"><span>${CATEGORY_NAMES[cat]}</span><span>${score === null ? "—" : score}</span></div>`
     );
   }
   const bonusText = bonusEarned(state) ? "bonus earned (+50)" : `${state.upperTotal}/63 for bonus`;
@@ -116,14 +119,22 @@ export function renderError(message: string | null): void {
   }
 }
 
-export function renderFinalTotal(state: GameState): void {
+export function renderFinalTotal(match: MatchState): void {
   const el = document.getElementById("final-total")!;
-  if (isGameComplete(state)) {
-    el.hidden = false;
-    el.textContent = `🎉 Game complete! Final score: ${totalScore(state)}`;
-  } else {
+  if (!isMatchComplete(match)) {
     el.hidden = true;
+    return;
   }
+  el.hidden = false;
+  if (match.mode === "solo") {
+    el.textContent = `🎉 Game complete! Final score: ${totalScore(match.player)}`;
+    return;
+  }
+  const playerTotal = totalScore(match.player);
+  const computerTotal = totalScore(match.computer!);
+  const winner = matchWinner(match);
+  const verdict = winner === "tie" ? "It's a tie!" : winner === "player" ? "You win! 🎉" : "Computer wins.";
+  el.textContent = `You: ${playerTotal} — Computer: ${computerTotal} — ${verdict}`;
 }
 
 const PIP_LAYOUTS: Record<number, string[]> = {
