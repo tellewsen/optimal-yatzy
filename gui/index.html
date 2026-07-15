@@ -29,6 +29,7 @@
           </select>
         </label>
       </div>
+      <div id="turn-indicator" class="turn-indicator" hidden></div>
       <main id="game-layout" class="game-layout">
         <div id="scorecards-row" class="scorecards-row">
           <section id="scorecard-card" class="card scorecard-card">
@@ -45,11 +46,13 @@
           <button id="warmup-button" class="btn btn-primary" hidden>🔥 Warm Up Engine</button>
           <span id="warmup-status" class="warmup-status" hidden></span>
           <div id="dice-inputs" class="dice-row"></div>
-          <div class="turn-actions">
+          <div id="turn-actions" class="turn-actions">
             <button id="roll-remaining-button" class="btn btn-primary">🎲 Roll remaining dice</button>
             <div id="rerolls-indicator" class="rerolls-dots"></div>
           </div>
           <button id="reroll-button" class="btn btn-primary" disabled>Reroll →</button>
+          <button id="computer-turn-button" class="btn btn-primary" hidden>Play Computer's Turn</button>
+          <div id="computer-turn-status" class="computer-turn-status" hidden></div>
           <div id="recommendation" class="recommendation-list"></div>
           <div id="error-banner" class="error-banner" hidden></div>
         </section>

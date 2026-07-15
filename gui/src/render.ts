@@ -3,7 +3,7 @@
 import {
   GameState, CATEGORY_NAMES, NUM_CATEGORIES, bonusEarned, totalScore,
 } from "./state";
-import { MatchState, Mode, isMatchComplete, matchWinner, compareCategoryScores } from "./match";
+import { MatchState, Mode, Turn, isMatchComplete, matchWinner, compareCategoryScores } from "./match";
 import { QueryResult } from "./parseResult";
 
 export function renderScorecard(containerId: string, state: GameState, opponent: GameState | null): void {
@@ -141,6 +141,39 @@ export function renderLayoutMode(mode: Mode): void {
   document.getElementById("computer-scorecard-card")!.hidden = mode !== "vsComputer";
   document.getElementById("game-layout")!.classList.toggle("vs-computer", mode === "vsComputer");
   document.getElementById("scorecard-title")!.textContent = mode === "vsComputer" ? "You" : "Scorecard";
+}
+
+export function renderTurnIndicator(match: MatchState): void {
+  const el = document.getElementById("turn-indicator")!;
+  if (match.mode === "solo" || isMatchComplete(match)) {
+    el.hidden = true;
+    return;
+  }
+  el.hidden = false;
+  el.textContent = match.turn === "player" ? "Your turn" : "Computer's turn";
+}
+
+export function renderTurnControls(turn: Turn | null): void {
+  const isPlayerTurn = turn === "player";
+  const isComputerTurn = turn === "computer";
+  document.getElementById("dice-inputs")!.hidden = !isPlayerTurn;
+  document.getElementById("turn-actions")!.hidden = !isPlayerTurn;
+  (document.getElementById("reroll-button") as HTMLButtonElement).hidden = !isPlayerTurn;
+  (document.getElementById("computer-turn-button") as HTMLButtonElement).hidden = !isComputerTurn;
+  document.getElementById("computer-turn-status")!.hidden = !isComputerTurn;
+  if (!isPlayerTurn) {
+    (document.getElementById("warmup-button") as HTMLButtonElement).hidden = true;
+    document.getElementById("warmup-status")!.hidden = true;
+  }
+}
+
+export function renderComputerTurnStatus(text: string): void {
+  document.getElementById("computer-turn-status")!.textContent = text;
+}
+
+export function renderComputerTurnButtonLabel(pacing: "instant" | "step"): void {
+  const button = document.getElementById("computer-turn-button") as HTMLButtonElement;
+  button.textContent = pacing === "instant" ? "Play Computer's Turn" : "Next →";
 }
 
 const PIP_LAYOUTS: Record<number, string[]> = {

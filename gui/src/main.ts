@@ -4,13 +4,14 @@ import {
   allDiceValid,
 } from "./state";
 import {
-  MatchState, Mode, initialMatchState, activeGameState, withActiveGameState, afterScore,
+  MatchState, Mode, initialMatchState, activeGameState, withActiveGameState, afterScore, isMatchComplete,
 } from "./match";
 import { getRecommendation, isEngineWarm } from "./sidecar";
 import { QueryResult } from "./parseResult";
 import {
   renderScorecard, renderRerollsIndicator, renderRecommendation, renderError,
   renderFinalTotal, renderDiceInputs, renderComputing, renderWarmUp, renderLayoutMode,
+  renderTurnIndicator, renderTurnControls, renderComputerTurnStatus, renderComputerTurnButtonLabel,
 } from "./render";
 
 let match: MatchState = initialMatchState("solo");
@@ -37,6 +38,10 @@ function renderAll(): void {
   }
   renderRerollsIndicator(active);
   renderFinalTotal(match);
+  renderTurnIndicator(match);
+  const controlsTurn = match.mode === "vsComputer" && isMatchComplete(match) ? null : match.turn;
+  renderTurnControls(controlsTurn);
+  renderComputerTurnButtonLabel(computerPacing);
   if (showHints) {
     renderRecommendation(lastResult, handleScoreCategory, handleHold);
   } else {
@@ -178,6 +183,52 @@ async function handleWarmUp(): Promise<void> {
   }
 }
 
+// Instant pacing: runs the computer's entire turn to completion behind one
+// click, only surfacing solve progress (via the same onProgress plumbing
+// the human's turn already uses) — no per-roll narration until the final
+// outcome. Returns null if the match moved on (e.g. New Game) mid-turn, in
+// which case the caller must not touch match/UI state.
+async function playComputerTurnInstant(myGeneration: number): Promise<string | null> {
+  let active = activeGameState(match);
+  for (;;) {
+    const dice = rollRemaining(active.dice) as number[];
+    renderComputerTurnStatus("Computer is thinking…");
+    const result = await getRecommendation(active, dice, (level, total) => {
+      if (generation === myGeneration) {
+        renderComputerTurnStatus(`Computer is thinking… (level ${level}/${total})`);
+      }
+    });
+    if (generation !== myGeneration) return null;
+    if (result.isRerollDecision) {
+      const best = result.rerollOptions[0];
+      active = applyHold(setDice(active, dice), best.holdValues);
+      continue;
+    }
+    const best = result.categoryOptions[0];
+    active = scoreCategory(active, best.category, best.resultingScore);
+    setMatch(afterScore(withActiveGameState(match, active)));
+    return `Computer rolled [${dice.join(",")}] and scored ${best.categoryName} for ${best.resultingScore} points.`;
+  }
+}
+
+async function handleComputerTurnInstant(): Promise<void> {
+  if (queryInFlight) return;
+  queryInFlight = true;
+  const myGeneration = generation;
+  try {
+    const summary = await playComputerTurnInstant(myGeneration);
+    if (summary !== null) {
+      renderComputerTurnStatus(summary);
+      renderAll();
+    }
+  } catch (err) {
+    renderError(err instanceof Error ? err.message : String(err));
+  } finally {
+    queryInFlight = false;
+    if (queryQueued) void maybeQuery();
+  }
+}
+
 document.getElementById("reroll-button")!.addEventListener("click", handleReroll);
 document.getElementById("roll-remaining-button")!.addEventListener("click", handleRollRemaining);
 document.getElementById("new-game-button")!.addEventListener("click", openNewGameModal);
@@ -194,7 +245,9 @@ document.getElementById("show-hints-toggle")!.addEventListener("change", (event)
 });
 document.getElementById("computer-pacing-select")!.addEventListener("change", (event) => {
   computerPacing = (event.target as HTMLSelectElement).value as "instant" | "step";
+  renderAll();
 });
+document.getElementById("computer-turn-button")!.addEventListener("click", () => void handleComputerTurnInstant());
 renderAll();
 
 renderWarmUp("checking");

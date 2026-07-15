@@ -359,3 +359,13 @@ body {
   gap: 8px;
   font-size: 0.9rem;
 }
+
+.turn-indicator {
+  font-weight: 700;
+  text-align: center;
+}
+
+.computer-turn-status {
+  font-size: 0.9rem;
+  margin: 8px 0;
+}
