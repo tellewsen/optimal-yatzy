@@ -118,6 +118,17 @@ body {
   padding-top: 6px;
 }
 
+#warmup-button {
+  margin-bottom: 0.75rem;
+}
+
+.warmup-status {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
 .dice-row {
   display: flex;
   gap: 10px;
@@ -165,6 +176,35 @@ body {
 .pip-mr { grid-row: 2; grid-column: 3; }
 .pip-bl { grid-row: 3; grid-column: 1; }
 .pip-br { grid-row: 3; grid-column: 3; }
+
+.die-wrapper {
+  position: relative;
+}
+
+.die-clear {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.die-clear:hover {
+  background: var(--error-bg);
+  border-color: var(--error-bg);
+  color: var(--text-on-felt);
+}
 
 .rerolls-dots {
   display: inline-flex;

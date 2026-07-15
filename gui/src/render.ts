@@ -74,11 +74,35 @@ export function renderRecommendation(
   }
 }
 
-export function renderComputing(): void {
+export function renderComputing(progressText?: string): void {
   const el = document.getElementById("recommendation")!;
   const rerollButton = document.getElementById("reroll-button") as HTMLButtonElement;
-  el.innerHTML = `<div class="computing-row"><span class="computing-die"></span>Computing recommendation… (the first solve for a fresh dice/state combo can take a couple of minutes)</div>`;
+  const detail = progressText ? ` — ${progressText}` : "";
+  el.innerHTML = `<div class="computing-row"><span class="computing-die"></span>Computing recommendation… (the first solve for a fresh dice/state combo can take a couple of minutes)${detail}</div>`;
   rerollButton.disabled = true;
+}
+
+export function renderWarmUp(status: "checking" | "cold" | "warming" | "warm", progressText?: string): void {
+  const button = document.getElementById("warmup-button") as HTMLButtonElement;
+  const label = document.getElementById("warmup-status")!;
+  if (status === "checking") {
+    button.hidden = true;
+    label.hidden = true;
+    return;
+  }
+  if (status === "warm") {
+    button.hidden = true;
+    label.hidden = false;
+    label.textContent = "✓ Engine ready";
+    return;
+  }
+  label.hidden = true;
+  button.hidden = false;
+  button.disabled = status === "warming";
+  button.textContent =
+    status === "warming"
+      ? `Warming up…${progressText ? ` (${progressText})` : ""}`
+      : "🔥 Warm Up Engine";
 }
 
 export function renderError(message: string | null): void {
@@ -119,6 +143,9 @@ export function renderDiceInputs(
   if (el.childElementCount !== 5) {
     el.innerHTML = "";
     for (let i = 0; i < 5; i++) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "die-wrapper";
+
       const button = document.createElement("button");
       button.type = "button";
       button.className = "die";
@@ -131,15 +158,28 @@ export function renderDiceInputs(
         const current = raw ? Number(raw) : null;
         onChange(i, current === null ? 1 : (current % 6) + 1);
       });
-      el.appendChild(button);
+
+      const clearButton = document.createElement("button");
+      clearButton.type = "button";
+      clearButton.className = "die-clear";
+      clearButton.setAttribute("aria-label", "Clear die");
+      clearButton.textContent = "×";
+      clearButton.addEventListener("click", () => onChange(i, null));
+
+      wrapper.appendChild(button);
+      wrapper.appendChild(clearButton);
+      el.appendChild(wrapper);
     }
   }
-  const buttons = el.querySelectorAll<HTMLButtonElement>(".die");
-  buttons.forEach((button, i) => {
+  const wrappers = el.querySelectorAll<HTMLDivElement>(".die-wrapper");
+  wrappers.forEach((wrapper, i) => {
     const value = dice[i];
+    const button = wrapper.querySelector<HTMLButtonElement>(".die")!;
+    const clearButton = wrapper.querySelector<HTMLButtonElement>(".die-clear")!;
     button.dataset.value = value === null ? "" : String(value);
     button.classList.toggle("die-empty", value === null);
     const pips = value === null ? [] : PIP_LAYOUTS[value];
     button.innerHTML = pips.map((pos) => `<span class="pip pip-${pos}"></span>`).join("");
+    clearButton.hidden = value === null;
   });
 }
