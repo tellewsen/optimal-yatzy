@@ -7,8 +7,9 @@
     "core:default",
     "opener:default",
     "fs:allow-appdata-write-recursive",
+    "fs:allow-appdata-read-recursive",
     {
-      "identifier": "shell:allow-execute",
+      "identifier": "shell:allow-spawn",
       "allow": [
         {
           "name": "binaries/yatzy_cpu",

@@ -3,7 +3,7 @@
 // manual verification instead, per the design spec.
 import { Command } from "@tauri-apps/plugin-shell";
 import { appDataDir, join } from "@tauri-apps/api/path";
-import { mkdir } from "@tauri-apps/plugin-fs";
+import { exists, mkdir } from "@tauri-apps/plugin-fs";
 import { GameState } from "./state";
 import { buildCliArgs } from "./cliArgs";
 import { parseQueryResult, QueryResult } from "./parseResult";
@@ -27,13 +27,51 @@ function resolveDpCachePath(): Promise<string> {
   return dpCachePathPromise;
 }
 
-export async function getRecommendation(state: GameState, dice: number[]): Promise<QueryResult> {
+export async function isEngineWarm(): Promise<boolean> {
+  const dpCachePath = await resolveDpCachePath();
+  return exists(dpCachePath);
+}
+
+// Matches the engine's `fprintf(stderr, "popcount %2d/%d done (%zu masks)\n", ...)`
+// progress line, emitted once per DP level during a cold solve (see
+// yatzy_engine.cpp). Only fires on a cache miss — a warm cache skips
+// straight to the result with no popcount lines at all.
+const PROGRESS_LINE = /popcount\s+(\d+)\/(\d+)/;
+
+export async function getRecommendation(
+  state: GameState,
+  dice: number[],
+  onProgress?: (level: number, total: number) => void
+): Promise<QueryResult> {
   const dpCachePath = await resolveDpCachePath();
   const args = [...buildCliArgs(state, dice), "--dp-cache", dpCachePath];
   const command = Command.sidecar("binaries/yatzy_cpu", args);
-  const output = await command.execute();
-  if (output.code !== 0) {
-    throw new Error(`yatzy_cpu exited with code ${output.code}: ${output.stderr}`);
-  }
-  return parseQueryResult(output.stdout);
+
+  return new Promise<QueryResult>((resolve, reject) => {
+    let stdout = "";
+    let stderr = "";
+    command.stdout.on("data", (line) => {
+      stdout += line + "\n";
+    });
+    command.stderr.on("data", (line) => {
+      stderr += line + "\n";
+      const match = PROGRESS_LINE.exec(line);
+      if (match) {
+        onProgress?.(Number(match[1]), Number(match[2]));
+      }
+    });
+    command.on("error", (error) => reject(new Error(String(error))));
+    command.on("close", (payload) => {
+      if (payload.code !== 0) {
+        reject(new Error(`yatzy_cpu exited with code ${payload.code}: ${stderr}`));
+        return;
+      }
+      try {
+        resolve(parseQueryResult(stdout));
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error(String(err)));
+      }
+    });
+    command.spawn().catch(reject);
+  });
 }

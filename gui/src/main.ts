@@ -3,11 +3,11 @@ import {
   initialGameState, setDice, advanceReroll, scoreCategory, applyHold, rollRemaining,
   allDiceValid, GameState,
 } from "./state";
-import { getRecommendation } from "./sidecar";
+import { getRecommendation, isEngineWarm } from "./sidecar";
 import { QueryResult } from "./parseResult";
 import {
   renderScorecard, renderRerollsIndicator, renderRecommendation, renderError,
-  renderFinalTotal, renderDiceInputs, renderComputing,
+  renderFinalTotal, renderDiceInputs, renderComputing, renderWarmUp,
 } from "./render";
 
 let state: GameState = initialGameState();
@@ -56,7 +56,11 @@ async function maybeQuery(): Promise<void> {
       }
       renderComputing();
       try {
-        const result = await getRecommendation(state, state.dice as number[]);
+        const result = await getRecommendation(state, state.dice as number[], (level, total) => {
+          if (generation === myGeneration) {
+            renderComputing(`level ${level}/${total}`);
+          }
+        });
         // State moved on while this call was in flight (e.g. New Game) —
         // this result no longer applies. Force another pass so the next
         // iteration re-evaluates against the current state instead.
@@ -123,7 +127,32 @@ function handleNewGame(): void {
   renderAll();
 }
 
+// Warming up runs through the same queryInFlight guard as a real dice query
+// so the two never spawn overlapping (CPU-heavy, multi-threaded) sidecar
+// solves against each other.
+async function handleWarmUp(): Promise<void> {
+  if (queryInFlight) return;
+  queryInFlight = true;
+  renderWarmUp("warming");
+  try {
+    await getRecommendation(initialGameState(), [1, 1, 1, 1, 1], (level, total) => {
+      renderWarmUp("warming", `level ${level}/${total}`);
+    });
+    renderWarmUp("warm");
+  } catch (err) {
+    renderWarmUp("cold");
+    renderError(err instanceof Error ? err.message : String(err));
+  } finally {
+    queryInFlight = false;
+    if (queryQueued) void maybeQuery();
+  }
+}
+
 document.getElementById("reroll-button")!.addEventListener("click", handleReroll);
 document.getElementById("roll-remaining-button")!.addEventListener("click", handleRollRemaining);
 document.getElementById("new-game-button")!.addEventListener("click", handleNewGame);
+document.getElementById("warmup-button")!.addEventListener("click", () => void handleWarmUp());
 renderAll();
+
+renderWarmUp("checking");
+void isEngineWarm().then((warm) => renderWarmUp(warm ? "warm" : "cold"));
