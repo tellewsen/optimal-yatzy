@@ -10,7 +10,7 @@ import { getRecommendation, isEngineWarm } from "./sidecar";
 import { QueryResult } from "./parseResult";
 import {
   renderScorecard, renderRerollsIndicator, renderRecommendation, renderError,
-  renderFinalTotal, renderDiceInputs, renderComputing, renderWarmUp,
+  renderFinalTotal, renderDiceInputs, renderComputing, renderWarmUp, renderLayoutMode,
 } from "./render";
 
 let match: MatchState = initialMatchState("solo");
@@ -28,7 +28,11 @@ function setMatch(next: MatchState): void {
 
 function renderAll(): void {
   const active = activeGameState(match);
+  renderLayoutMode(match.mode);
   renderScorecard("scorecard", match.player, match.mode === "vsComputer" ? match.computer : null);
+  if (match.mode === "vsComputer") {
+    renderScorecard("computer-scorecard", match.computer!, match.player);
+  }
   renderRerollsIndicator(active);
   renderFinalTotal(match);
   renderRecommendation(lastResult, handleScoreCategory, handleHold);

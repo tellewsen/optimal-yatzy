@@ -3,7 +3,7 @@
 import {
   GameState, CATEGORY_NAMES, NUM_CATEGORIES, bonusEarned, totalScore,
 } from "./state";
-import { MatchState, isMatchComplete, matchWinner, compareCategoryScores } from "./match";
+import { MatchState, Mode, isMatchComplete, matchWinner, compareCategoryScores } from "./match";
 import { QueryResult } from "./parseResult";
 
 export function renderScorecard(containerId: string, state: GameState, opponent: GameState | null): void {
@@ -135,6 +135,12 @@ export function renderFinalTotal(match: MatchState): void {
   const winner = matchWinner(match);
   const verdict = winner === "tie" ? "It's a tie!" : winner === "player" ? "You win! 🎉" : "Computer wins.";
   el.textContent = `You: ${playerTotal} — Computer: ${computerTotal} — ${verdict}`;
+}
+
+export function renderLayoutMode(mode: Mode): void {
+  document.getElementById("computer-scorecard-card")!.hidden = mode !== "vsComputer";
+  document.getElementById("game-layout")!.classList.toggle("vs-computer", mode === "vsComputer");
+  document.getElementById("scorecard-title")!.textContent = mode === "vsComputer" ? "You" : "Scorecard";
 }
 
 const PIP_LAYOUTS: Record<number, string[]> = {

@@ -91,7 +91,7 @@ body {
 }
 
 .scorecard-card {
-  flex: 1 1 320px;
+  flex: 1 1 220px;
 }
 
 .turn-card {
@@ -310,4 +310,23 @@ body {
   align-items: stretch;
   gap: 0.5rem;
   min-width: 240px;
+}
+
+.scorecards-row {
+  display: flex;
+  gap: 1rem;
+  flex: 1 1 320px;
+}
+
+.game-layout.vs-computer .scorecards-row {
+  flex: 1 1 100%;
+}
+
+.score-row.score-leading {
+  background: var(--gold-bg);
+  border-radius: 4px;
+}
+
+.score-row.score-trailing {
+  opacity: 0.7;
 }

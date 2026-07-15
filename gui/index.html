@@ -13,11 +13,17 @@
         <h1 class="app-title">🎲 Yatzy Assistant</h1>
         <button id="new-game-button" class="btn btn-primary">New Game</button>
       </header>
-      <main class="game-layout">
-        <section id="scorecard-card" class="card scorecard-card">
-          <h2 class="card-title">Scorecard</h2>
-          <section id="scorecard"></section>
-        </section>
+      <main id="game-layout" class="game-layout">
+        <div id="scorecards-row" class="scorecards-row">
+          <section id="scorecard-card" class="card scorecard-card">
+            <h2 id="scorecard-title" class="card-title">Scorecard</h2>
+            <section id="scorecard"></section>
+          </section>
+          <section id="computer-scorecard-card" class="card scorecard-card" hidden>
+            <h2 class="card-title">Computer</h2>
+            <section id="computer-scorecard"></section>
+          </section>
+        </div>
         <section id="turn-card" class="card turn-card">
           <h2 class="card-title">This Turn</h2>
           <button id="warmup-button" class="btn btn-primary" hidden>🔥 Warm Up Engine</button>
