@@ -218,9 +218,10 @@ async function handleComputerTurnInstant(): Promise<void> {
   try {
     const summary = await playComputerTurnInstant(myGeneration);
     if (summary !== null) {
+      const afterTurnGeneration = generation;
       renderComputerTurnStatus(summary);
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      if (generation === myGeneration) {
+      if (generation === afterTurnGeneration) {
         renderAll();
       }
     }
