@@ -1,17 +1,20 @@
 // render.ts — pure DOM rendering for the scorecard and turn panel. Reads
 // application state and a query result, writes to fixed DOM containers.
 import {
-  GameState, CATEGORY_NAMES, NUM_CATEGORIES, bonusEarned, totalScore, isGameComplete,
+  GameState, CATEGORY_NAMES, NUM_CATEGORIES, bonusEarned, totalScore,
 } from "./state";
+import { MatchState, Mode, Turn, isMatchComplete, matchWinner, compareCategoryScores } from "./match";
 import { QueryResult } from "./parseResult";
 
-export function renderScorecard(state: GameState): void {
-  const el = document.getElementById("scorecard")!;
+export function renderScorecard(containerId: string, state: GameState, opponent: GameState | null): void {
+  const el = document.getElementById(containerId)!;
   const rows: string[] = [];
   for (let cat = 0; cat < NUM_CATEGORIES; cat++) {
     const score = state.categoryScores[cat];
+    const cmp = opponent ? compareCategoryScores(score, opponent.categoryScores[cat]) : null;
+    const highlightClass = cmp === "a" ? " score-leading" : cmp === "b" ? " score-trailing" : "";
     rows.push(
-      `<div class="score-row"><span>${CATEGORY_NAMES[cat]}</span><span>${score === null ? "—" : score}</span></div>`
+      `<div class="score-row${highlightClass}"><span>${CATEGORY_NAMES[cat]}</span><span>${score === null ? "—" : score}</span></div>`
     );
   }
   const bonusText = bonusEarned(state) ? "bonus earned (+50)" : `${state.upperTotal}/63 for bonus`;
@@ -116,14 +119,61 @@ export function renderError(message: string | null): void {
   }
 }
 
-export function renderFinalTotal(state: GameState): void {
+export function renderFinalTotal(match: MatchState): void {
   const el = document.getElementById("final-total")!;
-  if (isGameComplete(state)) {
-    el.hidden = false;
-    el.textContent = `🎉 Game complete! Final score: ${totalScore(state)}`;
-  } else {
+  if (!isMatchComplete(match)) {
     el.hidden = true;
+    return;
   }
+  el.hidden = false;
+  if (match.mode === "solo") {
+    el.textContent = `🎉 Game complete! Final score: ${totalScore(match.player)}`;
+    return;
+  }
+  const playerTotal = totalScore(match.player);
+  const computerTotal = totalScore(match.computer!);
+  const winner = matchWinner(match);
+  const verdict = winner === "tie" ? "It's a tie!" : winner === "player" ? "You win! 🎉" : "Computer wins.";
+  el.textContent = `You: ${playerTotal} — Computer: ${computerTotal} — ${verdict}`;
+}
+
+export function renderLayoutMode(mode: Mode): void {
+  document.getElementById("computer-scorecard-card")!.hidden = mode !== "vsComputer";
+  document.getElementById("game-layout")!.classList.toggle("vs-computer", mode === "vsComputer");
+  document.getElementById("scorecard-title")!.textContent = mode === "vsComputer" ? "You" : "Scorecard";
+}
+
+export function renderTurnIndicator(match: MatchState): void {
+  const el = document.getElementById("turn-indicator")!;
+  if (match.mode === "solo" || isMatchComplete(match)) {
+    el.hidden = true;
+    return;
+  }
+  el.hidden = false;
+  el.textContent = match.turn === "player" ? "Your turn" : "Computer's turn";
+}
+
+export function renderTurnControls(turn: Turn | null): void {
+  const isPlayerTurn = turn === "player";
+  const isComputerTurn = turn === "computer";
+  document.getElementById("dice-inputs")!.hidden = !isPlayerTurn;
+  document.getElementById("turn-actions")!.hidden = !isPlayerTurn;
+  (document.getElementById("reroll-button") as HTMLButtonElement).hidden = !isPlayerTurn;
+  (document.getElementById("computer-turn-button") as HTMLButtonElement).hidden = !isComputerTurn;
+  document.getElementById("computer-turn-status")!.hidden = !isComputerTurn;
+  if (!isPlayerTurn) {
+    (document.getElementById("warmup-button") as HTMLButtonElement).hidden = true;
+    document.getElementById("warmup-status")!.hidden = true;
+  }
+}
+
+export function renderComputerTurnStatus(text: string): void {
+  document.getElementById("computer-turn-status")!.textContent = text;
+}
+
+export function renderComputerTurnButtonLabel(pacing: "instant" | "step"): void {
+  const button = document.getElementById("computer-turn-button") as HTMLButtonElement;
+  button.textContent = pacing === "instant" ? "Play Computer's Turn" : "Next →";
 }
 
 const PIP_LAYOUTS: Record<number, string[]> = {

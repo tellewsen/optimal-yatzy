@@ -11,28 +11,60 @@
     <div id="app">
       <header class="app-header">
         <h1 class="app-title">🎲 Yatzy Assistant</h1>
-        <button id="new-game-button" class="btn btn-primary">New Game</button>
+        <div class="header-actions">
+          <button id="settings-button" class="btn btn-icon" aria-label="Settings">⚙️</button>
+          <button id="new-game-button" class="btn btn-primary">New Game</button>
+        </div>
       </header>
-      <main class="game-layout">
-        <section id="scorecard-card" class="card scorecard-card">
-          <h2 class="card-title">Scorecard</h2>
-          <section id="scorecard"></section>
-        </section>
+      <div id="settings-panel" class="settings-panel card" hidden>
+        <label class="settings-row">
+          <input type="checkbox" id="show-hints-toggle" checked />
+          Show optimal move suggestions
+        </label>
+        <label class="settings-row">
+          <span>Computer plays:</span>
+          <select id="computer-pacing-select">
+            <option value="instant">Instantly</option>
+            <option value="step">Step-by-step</option>
+          </select>
+        </label>
+      </div>
+      <div id="turn-indicator" class="turn-indicator" hidden></div>
+      <main id="game-layout" class="game-layout">
+        <div id="scorecards-row" class="scorecards-row">
+          <section id="scorecard-card" class="card scorecard-card">
+            <h2 id="scorecard-title" class="card-title">Scorecard</h2>
+            <section id="scorecard"></section>
+          </section>
+          <section id="computer-scorecard-card" class="card scorecard-card" hidden>
+            <h2 class="card-title">Computer</h2>
+            <section id="computer-scorecard"></section>
+          </section>
+        </div>
         <section id="turn-card" class="card turn-card">
           <h2 class="card-title">This Turn</h2>
           <button id="warmup-button" class="btn btn-primary" hidden>🔥 Warm Up Engine</button>
           <span id="warmup-status" class="warmup-status" hidden></span>
           <div id="dice-inputs" class="dice-row"></div>
-          <div class="turn-actions">
+          <div id="turn-actions" class="turn-actions">
             <button id="roll-remaining-button" class="btn btn-primary">🎲 Roll remaining dice</button>
             <div id="rerolls-indicator" class="rerolls-dots"></div>
           </div>
           <button id="reroll-button" class="btn btn-primary" disabled>Reroll →</button>
+          <button id="computer-turn-button" class="btn btn-primary" hidden>Play Computer's Turn</button>
+          <div id="computer-turn-status" class="computer-turn-status" hidden></div>
           <div id="recommendation" class="recommendation-list"></div>
           <div id="error-banner" class="error-banner" hidden></div>
         </section>
       </main>
       <div id="final-total" class="final-banner" hidden></div>
+    <div id="new-game-modal" class="modal-overlay" hidden>
+      <div class="modal card">
+        <h2 class="card-title">New Game</h2>
+        <button id="mode-solo-button" class="btn btn-primary">Solo</button>
+        <button id="mode-vs-computer-button" class="btn btn-primary">vs Computer</button>
+      </div>
+    </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

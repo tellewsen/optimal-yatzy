@@ -16,12 +16,28 @@ your rolls during a real game and get the optimal move back, powered by the
 3. Click the option you want. Clicking a reroll option keeps those dice and
    clears the rest for you to physically re-roll and re-enter. Clicking a
    category option scores that turn and starts the next one.
-4. "New Game" resets the scorecard at any point.
+4. "New Game" opens a Solo / vs Computer picker before starting a fresh
+   scorecard.
 
 The very first query in a session solves the DP fresh (a couple of minutes);
 after that it's loaded from a cached table (`yatzy_cpu_dp.bin`, ~8MB) in
 Tauri's app-data directory, so it's near-instant on every later query and
 every future app launch.
+
+## Playing vs Computer
+
+In vs Computer mode you always go first. After you score a category, the
+computer takes its turn automatically — click "Play Computer's Turn" (or
+"Next →" in step-by-step mode) to let it play. It always plays the
+top-ranked (optimal) move; there's no adjustable difficulty. Once both
+scorecards have a score in the same category, the higher one is highlighted
+gold, and the match ends with a banner showing both totals and the winner
+(or a tie).
+
+The ⚙️ settings icon next to "New Game" opens a panel with two toggles:
+hiding the recommendation list if you'd rather play without hints, and
+switching the computer between playing its turn instantly or one
+roll/hold/reroll decision at a time ("Step-by-step").
 
 ## Rebuilding the sidecar
 
