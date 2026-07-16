@@ -5,6 +5,7 @@
 #include <array>
 #include <cassert>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -105,11 +106,11 @@ void test_winprob_terminal_and_yatzy_probability() {
     // value; any other s gets 0.
     {
         const float* bonusRow = &wp[((size_t)0 * stride1 + CapScore) * rowSize];
-        assert(fabs(bonusRow[Bonus] - 1.0f) < 1e-5f);
-        assert(fabs(bonusRow[Bonus + 1] - 0.0f) < 1e-5f);
+        assert(bonusRow[Bonus] == 1.0f);
+        assert(bonusRow[Bonus + 1] == 0.0f);
         const float* noBonusRow = &wp[((size_t)0 * stride1 + 0) * rowSize];
-        assert(fabs(noBonusRow[0] - 1.0f) < 1e-5f);
-        assert(fabs(noBonusRow[1] - 0.0f) < 1e-5f);
+        assert(noBonusRow[0] == 1.0f);
+        assert(noBonusRow[1] == 0.0f);
     }
 
     // Only Yatzy open (popcount 1): remaining is binary (0 or 50), so the
@@ -117,10 +118,15 @@ void test_winprob_terminal_and_yatzy_probability() {
     // every threshold 1..50, then exactly 0 above 50, and exactly 1 at 0.
     int yatzyOnlyMask = 1 << CatYatzy;
     const float* row = &wp[((size_t)yatzyOnlyMask * stride1 + 0) * rowSize];
-    assert(fabs(row[0] - 1.0f) < 1e-5f);
+    // row[0] is a tt==0 reroll-probability-sum artifact: computeVFromSubsetsCurve
+    // sums resultProb-weighted child values that should total exactly 1.0, but
+    // float32 summation of several resultProb terms doesn't always land exactly
+    // on 1.0 (observed overshoot ~1.19e-6 here) — tolerance is warranted only
+    // for this specific tt==0 sum, not as a general floating-point caution.
+    assert(fabsf(row[0] - 1.0f) < 1e-5f);
     float pYatzy = row[50];
-    assert(fabs(row[51] - 0.0f) < 1e-5f);
-    for (int tt = 1; tt <= 50; tt++) assert(fabs(row[tt] - pYatzy) < 1e-5f);
+    assert(row[51] == 0.0f);
+    for (int tt = 1; tt <= 50; tt++) assert(row[tt] == pYatzy);
     // Well-known trivia figure: optimal P(rolling a Yatzy, any face, in one
     // turn with up to 2 rerolls) is commonly cited around 4.6%. Wide
     // tolerance — this is a sanity check, not an exact-match regression
@@ -155,6 +161,11 @@ void test_winprob_monotonic_and_consistent_with_ev() {
                 const float* row = &wp[((size_t)mask * stride1 + s) * rowSize];
                 // Monotonicity: a survival function can't increase as the
                 // threshold rises.
+                // Verified necessary (not inherited caution): an exact
+                // row[tt] >= row[tt+1] check fails in practice for masks with
+                // popcount <= 3 — a standalone probe found violations up to
+                // ~1e-6 in magnitude, consistent with float32 rounding noise
+                // accumulating across the backward-induction levels.
                 for (int tt = 0; tt < NumThresholds - 1; tt++)
                     assert(row[tt] >= row[tt + 1] - 1e-5f);
                 // Consistency bound: summing P(>=t) over every t for the
