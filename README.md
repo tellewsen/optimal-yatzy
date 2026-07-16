@@ -119,3 +119,31 @@ No engine logic is duplicated — the GUI calls the same CLI built above.
 See [`gui/README.md`](gui/README.md) for usage, building the sidecar, and
 running/developing on Windows (the app itself only runs there — WSL can build
 and test the pure logic, but not launch the real Tauri app).
+
+## Further reading
+
+Background on the algorithm class and prior work solving Yahtzee/Yatzy
+optimally with the same backward-induction approach used here:
+
+- James Glenn, ["An Optimal Strategy for Yahtzee"](https://www.yahtzeemanifesto.com/an-optimal-strategy-for-yahtzee.php)
+  (Loyola College in Maryland, Technical Report CS-TR-0002, 2006) — the
+  standard reference for exact optimal-strategy solving of American
+  Yahtzee via dynamic programming; the ~254.6 expected-score figure widely
+  cited elsewhere traces back to this and Verhoeff's independent work below.
+- Tom Verhoeff, ["Solving Solitaire Yahtzee"](https://wstomv.win.tue.nl/publications/yahtzee-report-unfinished.pdf)
+  (Eindhoven University of Technology, 2004) — an independent derivation of
+  the optimal solitaire strategy and expected score, with more detail on
+  rule-variant sensitivity (bonus thresholds, joker rules, etc.).
+- Richard S. Sutton & Andrew G. Barto, [*Reinforcement Learning: An Introduction*](http://incompleteideas.net/book/the-book-2nd.html),
+  2nd ed., chapter 4 ("Dynamic Programming") — the general textbook
+  treatment of the Bellman-equation/backward-induction machinery this
+  repo's `solveDP()` is a finite-horizon instance of.
+- Nicholas A. Pape, ["Yahtzee: Reinforcement Learning Techniques for Stochastic
+  Combinatorial Games"](https://arxiv.org/abs/2601.00007) (2025) — trains
+  policy-gradient RL agents (REINFORCE, A2C, PPO) on solitaire Yahtzee,
+  reaching ~95% of the exact-DP optimum, and explicitly frames *multiplayer*
+  Yahtzee's intractable joint state space as the reason to reach for
+  approximation instead of exact DP — directly relevant background for
+  [2026-07-15-yatzy-win-probability-strategy-design.md](docs/superpowers/specs/2026-07-15-yatzy-win-probability-strategy-design.md),
+  which sidesteps that intractability by decomposing into independent
+  per-player distributions instead of a joint state.
