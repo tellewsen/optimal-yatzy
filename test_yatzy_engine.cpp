@@ -185,6 +185,24 @@ void test_winprob_monotonic_and_consistent_with_ev() {
     printf("test_winprob_monotonic_and_consistent_with_ev: checked %d (mask,s) rows, passed\n", checked);
 }
 
+void test_winprob_cache_roundtrip() {
+    FlatTables t = buildFlatTables();
+    const std::string path = "test_winprob_cache_roundtrip.bin";
+    std::remove(path.c_str());
+
+    std::vector<float> wp1 = loadOrSolveWinProbDP(t, path, 1);
+    FILE* f = fopen(path.c_str(), "rb");
+    assert(f != nullptr);
+    fclose(f);
+
+    std::vector<float> wp2 = loadOrSolveWinProbDP(t, path, 1);
+    assert(wp1.size() == wp2.size());
+    for (size_t i = 0; i < wp1.size(); i++) assert(wp1[i] == wp2[i]);
+
+    std::remove(path.c_str());
+    printf("test_winprob_cache_roundtrip: passed\n");
+}
+
 int main() {
     test_full_game_ev();
     test_dp_cache_roundtrip();
@@ -192,6 +210,7 @@ int main() {
     test_reroll_recommendation();
     test_winprob_terminal_and_yatzy_probability();
     test_winprob_monotonic_and_consistent_with_ev();
+    test_winprob_cache_roundtrip();
     printf("test_yatzy_engine: all tests passed\n");
     return 0;
 }

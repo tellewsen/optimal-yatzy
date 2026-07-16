@@ -268,6 +268,36 @@ std::vector<float> loadOrSolveDP(const FlatTables& t, const std::string& path) {
     return dp;
 }
 
+bool saveWinProbDP(const std::vector<float>& wp, const std::string& path) {
+    FILE* f = fopen(path.c_str(), "wb");
+    if (!f) return false;
+    size_t n = wp.size();
+    fwrite(&n, sizeof(size_t), 1, f);
+    fwrite(wp.data(), sizeof(float), n, f);
+    fclose(f);
+    return true;
+}
+
+bool loadWinProbDP(std::vector<float>& wp, const std::string& path, size_t expectedSize) {
+    FILE* f = fopen(path.c_str(), "rb");
+    if (!f) return false;
+    size_t n = 0;
+    if (fread(&n, sizeof(size_t), 1, f) != 1 || n != expectedSize) { fclose(f); return false; }
+    wp.resize(n);
+    size_t read = fread(wp.data(), sizeof(float), n, f);
+    fclose(f);
+    return read == n;
+}
+
+std::vector<float> loadOrSolveWinProbDP(const FlatTables& t, const std::string& path, int maxPopcount) {
+    size_t expectedSize = ((size_t)1 << NumCats) * (size_t)(CapScore + 1) * (size_t)NumThresholds;
+    std::vector<float> wp;
+    if (loadWinProbDP(wp, path, expectedSize)) return wp;
+    wp = solveWinProbDP(t, maxPopcount);
+    saveWinProbDP(wp, path);
+    return wp;
+}
+
 QueryResult query(const FlatTables& t, const std::vector<float>& dp,
                    int usedMask, int upperTotal, const std::array<int,5>& dice,
                    int rerollsLeft) {
