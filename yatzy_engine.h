@@ -9,11 +9,26 @@
 
 constexpr long long FullMask = (1LL << NumCats) - 1;
 
+// Theoretical maximum standard-Yatzy game score: 105 (upper pips, all
+// categories maxed) + 50 (bonus) + 12 (one pair) + 22 (two pairs) + 18
+// (three of a kind) + 24 (four of a kind) + 15 (small straight) + 20
+// (large straight) + 28 (full house) + 30 (chance) + 50 (Yatzy) = 374.
+constexpr int MaxRemainingScore = 374;
+constexpr int NumThresholds = MaxRemainingScore + 1;
+
 // dp[mask * (CapScore+1) + s] = expected value of optimal play from here,
 // given `mask` = categories still open and `s` = capped upper-section total
 // so far (0..CapScore). Runs on CPU with std::thread parallelism across
 // masks within each popcount level; may take up to a couple of minutes.
 std::vector<float> solveDP(const FlatTables& t);
+
+// winProb[(mask * (CapScore+1) + s) * NumThresholds + t] = P(a policy that
+// maximizes exactly this probability achieves remaining score >= t), for
+// t in 0..MaxRemainingScore. `maxPopcount` limits the backward induction to
+// masks with at most this many open categories — production callers always
+// use the default (full solve); tests pass a small value to solve only a
+// cheap slice of the table. Masks above maxPopcount are left as zero.
+std::vector<float> solveWinProbDP(const FlatTables& t, int maxPopcount = NumCats);
 
 bool saveDP(const std::vector<float>& dp, const std::string& path);
 bool loadDP(std::vector<float>& dp, const std::string& path, size_t expectedSize);

@@ -93,11 +93,94 @@ void test_reroll_recommendation() {
     printf("test_reroll_recommendation: passed\n");
 }
 
+void test_winprob_terminal_and_yatzy_probability() {
+    FlatTables t = buildFlatTables();
+    // maxPopcount=1: solves mask==0 (terminal) plus every single-category
+    // mask — cheap (16 masks x 64 s-values), no full 15-level solve needed.
+    std::vector<float> wp = solveWinProbDP(t, 1);
+    size_t stride1 = (size_t)(CapScore + 1);
+    size_t rowSize = (size_t)NumThresholds;
+
+    // Terminal exactness: mask==0, s==CapScore gets the bonus as a fixed
+    // value; any other s gets 0.
+    {
+        const float* bonusRow = &wp[((size_t)0 * stride1 + CapScore) * rowSize];
+        assert(fabs(bonusRow[Bonus] - 1.0f) < 1e-5f);
+        assert(fabs(bonusRow[Bonus + 1] - 0.0f) < 1e-5f);
+        const float* noBonusRow = &wp[((size_t)0 * stride1 + 0) * rowSize];
+        assert(fabs(noBonusRow[0] - 1.0f) < 1e-5f);
+        assert(fabs(noBonusRow[1] - 0.0f) < 1e-5f);
+    }
+
+    // Only Yatzy open (popcount 1): remaining is binary (0 or 50), so the
+    // curve must be flat at whatever P(scoring a Yatzy this turn) is, for
+    // every threshold 1..50, then exactly 0 above 50, and exactly 1 at 0.
+    int yatzyOnlyMask = 1 << CatYatzy;
+    const float* row = &wp[((size_t)yatzyOnlyMask * stride1 + 0) * rowSize];
+    assert(fabs(row[0] - 1.0f) < 1e-5f);
+    float pYatzy = row[50];
+    assert(fabs(row[51] - 0.0f) < 1e-5f);
+    for (int tt = 1; tt <= 50; tt++) assert(fabs(row[tt] - pYatzy) < 1e-5f);
+    // Well-known trivia figure: optimal P(rolling a Yatzy, any face, in one
+    // turn with up to 2 rerolls) is commonly cited around 4.6%. Wide
+    // tolerance — this is a sanity check, not an exact-match regression
+    // test (same spirit as test_full_game_ev's EV range check).
+    printf("P(Yatzy this turn) = %f\n", pYatzy);
+    assert(pYatzy > 0.03f && pYatzy < 0.07f);
+
+    printf("test_winprob_terminal_and_yatzy_probability: passed\n");
+}
+
+void test_winprob_monotonic_and_consistent_with_ev() {
+    FlatTables t = buildFlatTables();
+    std::vector<float> dp = loadOrSolveDP(t, "test_dp_cache_shared.bin");
+    // maxPopcount=3: covers every mask with <=3 open categories (576 masks
+    // x 64 s-values) — fast, and deep enough to exercise 3 real levels of
+    // the backward induction (each level depends on the one below it).
+    std::vector<float> wp = solveWinProbDP(t, 3);
+    size_t stride1 = (size_t)(CapScore + 1);
+    size_t rowSize = (size_t)NumThresholds;
+
+    std::vector<std::vector<int>> masksByPopcount(4);
+    for (long long mask = 0; mask <= FullMask; mask++) {
+        int pc = 0;
+        for (long long m = mask; m; m &= (m - 1)) pc++;
+        if (pc <= 3) masksByPopcount[pc].push_back((int)mask);
+    }
+
+    int checked = 0;
+    for (int pc = 0; pc <= 3; pc++) {
+        for (int mask : masksByPopcount[pc]) {
+            for (int s : {0, 10, 40, CapScore}) {
+                const float* row = &wp[((size_t)mask * stride1 + s) * rowSize];
+                // Monotonicity: a survival function can't increase as the
+                // threshold rises.
+                for (int tt = 0; tt < NumThresholds - 1; tt++)
+                    assert(row[tt] >= row[tt + 1] - 1e-5f);
+                // Consistency bound: summing P(>=t) over every t for the
+                // per-threshold-optimal policy can only be >= the single
+                // EV-maximizing policy's expected value (E[R] = sum_{t>=1}
+                // P(R>=t) for ANY one fixed policy; the winProb table uses
+                // a potentially-different, locally-optimal policy per t,
+                // so its sum is an upper bound, never a lower one).
+                double sum = 0.0;
+                for (int tt = 1; tt < NumThresholds; tt++) sum += row[tt];
+                float evValue = dp[(size_t)mask * stride1 + s];
+                assert(sum >= (double)evValue - 1e-3);
+                checked++;
+            }
+        }
+    }
+    printf("test_winprob_monotonic_and_consistent_with_ev: checked %d (mask,s) rows, passed\n", checked);
+}
+
 int main() {
     test_full_game_ev();
     test_dp_cache_roundtrip();
     test_category_recommendation();
     test_reroll_recommendation();
+    test_winprob_terminal_and_yatzy_probability();
+    test_winprob_monotonic_and_consistent_with_ev();
     printf("test_yatzy_engine: all tests passed\n");
     return 0;
 }

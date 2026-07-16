@@ -56,6 +56,66 @@ void computeVFromSubsets(const FlatTables& t, const std::vector<float>& Vdown, c
     }
 }
 
+// Curve-valued analog of computeV0: V0curve[ci][t] = P(remaining >= t) for
+// combo ci, given the caller must score into `mask` now, using already-
+// solved child rows from `wp` (rows for masks with strictly fewer open
+// categories than `mask`, already populated by an earlier popcount level).
+void computeV0Curve(int mask, int s, const FlatTables& t, const std::vector<float>& wp,
+                     std::vector<float>& V0curve) {
+    size_t stride1 = (size_t)(CapScore + 1);
+    size_t rowSize = (size_t)NumThresholds;
+    for (int ci = 0; ci < t.numCombos; ci++) {
+        float* out = &V0curve[(size_t)ci * rowSize];
+        std::fill(out, out + NumThresholds, 0.0f);
+        for (int m = mask; m; m &= (m - 1)) {
+            int bit = m & (-m);
+            int cat = __builtin_ctz((unsigned)bit);
+            int pts = t.scoreTable[(size_t)ci * NumCats + cat];
+            int ns = s;
+            if (cat < UpperCats) {
+                ns = s + pts;
+                if (ns > CapScore) ns = CapScore;
+            }
+            int childMask = mask ^ bit;
+            const float* child = &wp[((size_t)childMask * stride1 + ns) * rowSize];
+            for (int tt = 0; tt < NumThresholds; tt++) {
+                int need = tt - pts;
+                // Banking `pts` alone already guarantees remaining >= tt
+                // once need <= 0 — no need to consult the child at all.
+                float val = (need <= 0) ? 1.0f : (need >= NumThresholds ? 0.0f : child[need]);
+                if (val > out[tt]) out[tt] = val;
+            }
+        }
+    }
+}
+
+// Curve-valued analog of computeVFromSubsets. Structurally identical to
+// the scalar version — a probability-weighted sum of "P(success)" curves
+// is still a valid "P(success)" curve (linearity of expectation over an
+// indicator variable) — just widened from one float per combo to a
+// NumThresholds-length row per combo.
+void computeVFromSubsetsCurve(const FlatTables& t, const std::vector<float>& Vdown,
+                               const std::vector<float>& V0curve, std::vector<float>& Vout) {
+    size_t rowSize = (size_t)NumThresholds;
+    for (int ci = 0; ci < t.numCombos; ci++) {
+        float* out = &Vout[(size_t)ci * rowSize];
+        const float* v0 = &V0curve[(size_t)ci * rowSize];
+        std::copy(v0, v0 + NumThresholds, out);
+        int ss = t.subsetStart[ci], se = t.subsetStart[ci + 1];
+        for (int si = ss; si < se; si++) {
+            int rs = t.subsetResultStart[si], re = t.subsetResultStart[si + 1];
+            std::array<float, NumThresholds> val{};
+            for (int ri = rs; ri < re; ri++) {
+                float p = t.resultProb[ri];
+                const float* childCurve = &Vdown[(size_t)t.resultComboID[ri] * rowSize];
+                for (int tt = 0; tt < NumThresholds; tt++) val[tt] += p * childCurve[tt];
+            }
+            for (int tt = 0; tt < NumThresholds; tt++)
+                if (val[tt] > out[tt]) out[tt] = val[tt];
+        }
+    }
+}
+
 std::vector<int> countsToValues(const Counts& c) {
     std::vector<int> values;
     for (int f = 0; f < 6; f++)
@@ -114,6 +174,68 @@ std::vector<float> solveDP(const FlatTables& t) {
         fprintf(stderr, "popcount %2d/%d done (%zu masks)\n", p, NumCats, n);
     }
     return dp;
+}
+
+std::vector<float> solveWinProbDP(const FlatTables& t, int maxPopcount) {
+    size_t totalMasks = (size_t)1 << NumCats;
+    size_t stride1 = (size_t)(CapScore + 1);
+    size_t rowSize = (size_t)NumThresholds;
+    size_t dpSize = totalMasks * stride1 * rowSize;
+    std::vector<float> wp(dpSize, 0.0f);
+
+    // mask == 0: no categories left; remaining is a fixed value (the
+    // bonus if the capped upper total reached CapScore, else 0) — not
+    // random, so the curve is an exact step function.
+    for (int s = 0; s <= CapScore; s++) {
+        float* row = &wp[((size_t)0 * stride1 + s) * rowSize];
+        int fixedRemaining = (s == CapScore) ? Bonus : 0;
+        for (int tt = 0; tt < NumThresholds; tt++) row[tt] = (tt <= fixedRemaining) ? 1.0f : 0.0f;
+    }
+
+    std::vector<std::vector<int>> masksByPopcount(NumCats + 1);
+    for (long long mask = 0; mask <= FullMask; mask++)
+        masksByPopcount[popcount(mask)].push_back((int)mask);
+
+    unsigned numThreads = std::max(1u, std::thread::hardware_concurrency());
+
+    for (int p = 1; p <= maxPopcount; p++) {
+        auto& levelMasks = masksByPopcount[p];
+        size_t n = levelMasks.size();
+        size_t chunk = (n + numThreads - 1) / numThreads;
+
+        auto worker = [&](size_t begin, size_t end) {
+            std::vector<float> V0((size_t)t.numCombos * rowSize);
+            std::vector<float> V1((size_t)t.numCombos * rowSize);
+            std::vector<float> V2((size_t)t.numCombos * rowSize);
+            for (size_t idx = begin; idx < end; idx++) {
+                int mask = levelMasks[idx];
+                for (int s = 0; s <= CapScore; s++) {
+                    computeV0Curve(mask, s, t, wp, V0);
+                    computeVFromSubsetsCurve(t, V0, V0, V1);
+                    computeVFromSubsetsCurve(t, V1, V0, V2);
+                    float* out = &wp[((size_t)mask * stride1 + s) * rowSize];
+                    for (int tt = 0; tt < NumThresholds; tt++) {
+                        float acc = 0.0f;
+                        for (int ci = 0; ci < t.numCombos; ci++)
+                            acc += t.comboProb[ci] * V2[(size_t)ci * rowSize + tt];
+                        out[tt] = acc;
+                    }
+                }
+            }
+        };
+
+        std::vector<std::thread> threads;
+        for (unsigned tIdx = 0; tIdx < numThreads; tIdx++) {
+            size_t begin = std::min(n, (size_t)tIdx * chunk);
+            size_t end = std::min(n, begin + chunk);
+            if (begin >= end) continue;
+            threads.emplace_back(worker, begin, end);
+        }
+        for (auto& th : threads) th.join();
+
+        fprintf(stderr, "winprob popcount %2d/%d done (%zu masks)\n", p, maxPopcount, n);
+    }
+    return wp;
 }
 
 bool saveDP(const std::vector<float>& dp, const std::string& path) {
