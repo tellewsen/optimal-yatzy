@@ -203,6 +203,39 @@ void test_winprob_cache_roundtrip() {
     printf("test_winprob_cache_roundtrip: passed\n");
 }
 
+void test_queryforwin_deterministic_outcomes() {
+    FlatTables t = buildFlatTables();
+    // Only Chance open for me (popcount 1) — queryForWin only ever reads
+    // wp rows for masks strictly below my open mask's popcount, so a
+    // maxPopcount=0 (terminal-only) solve is sufficient here.
+    std::vector<float> wp = solveWinProbDP(t, 0);
+
+    int myUsedMask = (int)FullMask & ~(1 << CatChance); // only Chance open
+    std::array<int,5> dice = {3, 3, 3, 3, 3};            // Chance score = 15
+    int oppUsedMask = (int)FullMask;                     // opponent fully done
+
+    // My final = myBanked + 15. Opponent final = oppBanked (no pending
+    // points: oppUpperTotal=0 means the terminal curve's fixed remainder
+    // is 0, so oppBanked already reflects their true final score).
+    struct Case { int myBanked, oppBanked; float expectWin, expectTie; };
+    Case cases[] = {
+        {190, 200, 1.0f, 0.0f}, // 205 > 200: win
+        {190, 210, 0.0f, 0.0f}, // 205 < 210: loss
+        {190, 205, 0.0f, 1.0f}, // 205 == 205: tie
+    };
+    for (const auto& tc : cases) {
+        WinQueryResult r = queryForWin(t, wp, myUsedMask, 0, tc.myBanked, dice, 0,
+                                        oppUsedMask, 0, tc.oppBanked);
+        assert(!r.isRerollDecision);
+        assert(r.categoryOptions.size() == 1);
+        assert(r.categoryOptions[0].category == CatChance);
+        assert(r.categoryOptions[0].resultingScore == 15);
+        assert(r.categoryOptions[0].winProb == tc.expectWin);
+        assert(r.categoryOptions[0].tieProb == tc.expectTie);
+    }
+    printf("test_queryforwin_deterministic_outcomes: passed\n");
+}
+
 int main() {
     test_full_game_ev();
     test_dp_cache_roundtrip();
@@ -211,6 +244,7 @@ int main() {
     test_winprob_terminal_and_yatzy_probability();
     test_winprob_monotonic_and_consistent_with_ev();
     test_winprob_cache_roundtrip();
+    test_queryforwin_deterministic_outcomes();
     printf("test_yatzy_engine: all tests passed\n");
     return 0;
 }

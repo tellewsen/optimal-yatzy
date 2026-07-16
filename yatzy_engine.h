@@ -68,3 +68,31 @@ struct QueryResult {
 QueryResult query(const FlatTables& t, const std::vector<float>& dp,
                    int usedMask, int upperTotal, const std::array<int,5>& dice,
                    int rerollsLeft);
+
+struct WinRerollOption {
+    std::vector<int> heldValues;
+    float winProb;
+    float tieProb;
+};
+
+struct WinCategoryOption {
+    int category;
+    int resultingScore;
+    float winProb;
+    float tieProb;
+};
+
+struct WinQueryResult {
+    bool isRerollDecision;
+    std::vector<WinRerollOption> rerollOptions;
+    std::vector<WinCategoryOption> categoryOptions;
+};
+
+// myBankedTotal / oppBankedTotal: actual banked scores (not the capped
+// upper-section bookkeeping value) — what the final comparison is decided
+// on. myUsedMask/oppUsedMask follow the same "bit set = category already
+// scored" convention as query()'s usedMask.
+WinQueryResult queryForWin(const FlatTables& t, const std::vector<float>& wp,
+                           int myUsedMask, int myUpperTotal, int myBankedTotal,
+                           const std::array<int,5>& myDice, int myRerollsLeft,
+                           int oppUsedMask, int oppUpperTotal, int oppBankedTotal);
