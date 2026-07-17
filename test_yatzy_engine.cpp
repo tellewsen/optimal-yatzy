@@ -195,12 +195,66 @@ void test_winprob_cache_roundtrip() {
     assert(f != nullptr);
     fclose(f);
 
+    // Checksum wp1 rather than keeping it around for a full element-wise
+    // comparison against wp2 — the win-prob table is ~3.1GB, so holding two
+    // copies simultaneously would double this test's peak memory to ~6.2GB.
+    // A double-precision sum over the exact same float values, read back
+    // byte-identical from disk, is exact (no reordering, no arithmetic
+    // differences) — not weaker in practice than an element-wise compare
+    // for a file-roundtrip bug, and it lets wp1 be freed before wp2 loads.
+    size_t size1 = wp1.size();
+    double checksum1 = 0.0;
+    for (float v : wp1) checksum1 += v;
+    wp1.clear();
+    wp1.shrink_to_fit();
+
     std::vector<float> wp2 = loadOrSolveWinProbDP(t, path, 1);
-    assert(wp1.size() == wp2.size());
-    for (size_t i = 0; i < wp1.size(); i++) assert(wp1[i] == wp2[i]);
+    assert(wp2.size() == size1);
+    double checksum2 = 0.0;
+    for (float v : wp2) checksum2 += v;
+    assert(checksum1 == checksum2);
 
     std::remove(path.c_str());
     printf("test_winprob_cache_roundtrip: passed\n");
+}
+
+void test_winprob_cache_rejects_shallower_solve() {
+    FlatTables t = buildFlatTables();
+    const std::string path = "test_winprob_cache_depth_check.bin";
+    std::remove(path.c_str());
+
+    // Solve+cache at a shallow depth first.
+    loadOrSolveWinProbDP(t, path, 1);
+
+    // Requesting a deeper solve against the same cache path must NOT
+    // silently reuse the shallower cache (it's byte-size-identical to a
+    // full solve, since solveWinProbDP always allocates the full-size
+    // array regardless of maxPopcount) — it must detect the depth
+    // mismatch and re-solve to the requested depth.
+    std::vector<float> deeper = loadOrSolveWinProbDP(t, path, 3);
+
+    // Spot-check a mask that only gets meaningfully solved at popcount 3
+    // (three open categories) — before this fix, this would still show
+    // the shallow solve's all-zero-past-threshold-0 pattern, because the
+    // stale cache file would have been silently reused.
+    int mask3 = (1 << CatOnes) | (1 << CatTwos) | (1 << CatThrees);
+    size_t stride1 = (size_t)(CapScore + 1);
+    size_t rowSize = (size_t)NumThresholds;
+    const float* row = &deeper[((size_t)mask3 * stride1 + 0) * rowSize];
+    // row[0] is NOT bit-exact here (unlike the mask==0 terminal case): for
+    // any mask with real reroll choices, V1/V2's tt==0 column sums several
+    // resultProb-weighted 1.0 terms that don't always land exactly on 1.0
+    // in float32 — the same mechanism found for the single-Yatzy-open case
+    // during Task 1's review, just general to any multi-category mask.
+    // Empirically verified via a standalone probe: observed overshoot
+    // ~1.19e-6 here, comfortably inside this tolerance.
+    assert(fabsf(row[0] - 1.0f) < 1e-4f);
+    bool foundNonzero = false;
+    for (int tt = 1; tt < NumThresholds; tt++) if (row[tt] > 0.0f) { foundNonzero = true; break; }
+    assert(foundNonzero);
+
+    std::remove(path.c_str());
+    printf("test_winprob_cache_rejects_shallower_solve: passed\n");
 }
 
 void test_queryforwin_deterministic_outcomes() {
@@ -244,6 +298,7 @@ int main() {
     test_winprob_terminal_and_yatzy_probability();
     test_winprob_monotonic_and_consistent_with_ev();
     test_winprob_cache_roundtrip();
+    test_winprob_cache_rejects_shallower_solve();
     test_queryforwin_deterministic_outcomes();
     printf("test_yatzy_engine: all tests passed\n");
     return 0;

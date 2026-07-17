@@ -268,21 +268,23 @@ std::vector<float> loadOrSolveDP(const FlatTables& t, const std::string& path) {
     return dp;
 }
 
-bool saveWinProbDP(const std::vector<float>& wp, const std::string& path) {
+bool saveWinProbDP(const std::vector<float>& wp, int maxPopcount, const std::string& path) {
     FILE* f = fopen(path.c_str(), "wb");
     if (!f) return false;
     size_t n = wp.size();
     fwrite(&n, sizeof(size_t), 1, f);
+    fwrite(&maxPopcount, sizeof(int), 1, f);
     fwrite(wp.data(), sizeof(float), n, f);
     fclose(f);
     return true;
 }
 
-bool loadWinProbDP(std::vector<float>& wp, const std::string& path, size_t expectedSize) {
+bool loadWinProbDP(std::vector<float>& wp, int& savedMaxPopcount, const std::string& path, size_t expectedSize) {
     FILE* f = fopen(path.c_str(), "rb");
     if (!f) return false;
     size_t n = 0;
     if (fread(&n, sizeof(size_t), 1, f) != 1 || n != expectedSize) { fclose(f); return false; }
+    if (fread(&savedMaxPopcount, sizeof(int), 1, f) != 1) { fclose(f); return false; }
     wp.resize(n);
     size_t read = fread(wp.data(), sizeof(float), n, f);
     fclose(f);
@@ -292,9 +294,10 @@ bool loadWinProbDP(std::vector<float>& wp, const std::string& path, size_t expec
 std::vector<float> loadOrSolveWinProbDP(const FlatTables& t, const std::string& path, int maxPopcount) {
     size_t expectedSize = ((size_t)1 << NumCats) * (size_t)(CapScore + 1) * (size_t)NumThresholds;
     std::vector<float> wp;
-    if (loadWinProbDP(wp, path, expectedSize)) return wp;
+    int savedMaxPopcount = -1;
+    if (loadWinProbDP(wp, savedMaxPopcount, path, expectedSize) && savedMaxPopcount >= maxPopcount) return wp;
     wp = solveWinProbDP(t, maxPopcount);
-    saveWinProbDP(wp, path);
+    saveWinProbDP(wp, maxPopcount, path);
     return wp;
 }
 

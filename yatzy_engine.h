@@ -30,11 +30,18 @@ std::vector<float> solveDP(const FlatTables& t);
 // cheap slice of the table. Masks above maxPopcount are left as zero.
 std::vector<float> solveWinProbDP(const FlatTables& t, int maxPopcount = NumCats);
 
-bool saveWinProbDP(const std::vector<float>& wp, const std::string& path);
-bool loadWinProbDP(std::vector<float>& wp, const std::string& path, size_t expectedSize);
+// The cache file stores the solved maxPopcount alongside the table data so
+// loadOrSolveWinProbDP can detect and reject a shallower-than-needed solve
+// (a partial solve is byte-size-identical to a full one — masks above its
+// maxPopcount are simply left at zero — so size alone can't distinguish
+// them; without this check, reusing a partial-solve cache at the default
+// path would silently return zero/wrong answers for high-popcount states).
+bool saveWinProbDP(const std::vector<float>& wp, int maxPopcount, const std::string& path);
+bool loadWinProbDP(std::vector<float>& wp, int& savedMaxPopcount, const std::string& path, size_t expectedSize);
 
-// Loads wp from `path` if present and the right size; otherwise solves it
-// (see solveWinProbDP's maxPopcount note) and saves it there for next time.
+// Loads wp from `path` if present, the right size, AND solved to at least
+// `maxPopcount`; otherwise solves it (see solveWinProbDP's maxPopcount
+// note) and saves it there for next time.
 std::vector<float> loadOrSolveWinProbDP(const FlatTables& t, const std::string& path, int maxPopcount = NumCats);
 
 bool saveDP(const std::vector<float>& dp, const std::string& path);

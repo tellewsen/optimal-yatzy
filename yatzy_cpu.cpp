@@ -25,7 +25,7 @@ void printUsageAndExit(const char* prog) {
         "Usage: %s --used <comma-separated category indices> --upper <int> "
         "--dice <5 comma-separated 1-6 values> --rerolls <0|1|2> [--json] [--dp-cache <path>]\n"
         "  [--opp-used <indices> --opp-upper <int> --my-banked <int> --opp-banked <int> "
-        "[--winprob-cache <path>]]\n"
+        "[--winprob-cache <path>] [--winprob-max-popcount N (internal)]]\n"
         "Categories: 0=Ones 1=Twos 2=Threes 3=Fours 4=Fives 5=Sixes 6=OnePair "
         "7=TwoPairs 8=ThreeOfAKind 9=FourOfAKind 10=SmallStraight 11=LargeStraight "
         "12=FullHouse 13=Chance 14=Yatzy\n"
@@ -70,6 +70,10 @@ int main(int argc, char** argv) {
     bool winProbMode = oppUsedProvided || oppUpperTotal >= 0 || myBankedTotal >= 0 || oppBankedTotal >= 0;
     if (winProbMode && !(oppUsedProvided && oppUpperTotal >= 0 && myBankedTotal >= 0 && oppBankedTotal >= 0)) {
         fprintf(stderr, "error: --opp-used, --opp-upper, --my-banked, --opp-banked must all be given together\n");
+        return 1;
+    }
+    if (winProbMode && (winProbMaxPopcount < 0 || winProbMaxPopcount > NumCats)) {
+        fprintf(stderr, "error: --winprob-max-popcount must be between 0 and %d\n", NumCats);
         return 1;
     }
 
