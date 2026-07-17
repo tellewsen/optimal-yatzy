@@ -13,6 +13,11 @@ yatzy_cpu_dp.bin
 test_cli_dp_cache.bin
 test_dp_cache_roundtrip.bin
 test_dp_cache_shared.bin
+yatzy_cpu_winprob.bin
+test_cli_winprob_cache.bin
+test_winprob_cache_roundtrip.bin
+test_winprob_cache_depth_check.bin
+bench_winprob.bin
 
 # Windows zone-identifier alternate-data streams (from files copied over from Windows)
 *:Zone.Identifier
