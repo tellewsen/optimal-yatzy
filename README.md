@@ -1,23 +1,77 @@
 # Yatzy Optimal Strategy Solvers
 
-Backward-induction DP solvers for optimal Yatzy play, plus a desktop GUI that
-uses one of them to give live move recommendations during a real game. Three
-independent pieces live in this repo:
+Backward-induction DP solvers for optimal Yatzy play, plus a desktop app
+(OptiYatzy) that uses one of them to give live move recommendations during a
+real game. Three independent pieces live in this repo:
 
 - **Standard Yatzy (5-dice, Scandinavian rules) — CPU solver.** The actively
   developed core: `yatzy_engine.h`/`.cpp`, `precompute_std.h`, `yatzy_cpu.cpp`.
   See [Standard Yatzy (CPU)](#standard-yatzy-cpu) below.
+- **OptiYatzy** (`gui/`) — a Windows desktop app (Tauri) that wraps the
+  standard-Yatzy CLI as a sidecar and adds a full turn-by-turn play UI,
+  including a "vs Computer" mode where the computer plays optimally. See
+  [OptiYatzy](#optiyatzy) below and [`gui/README.md`](gui/README.md).
 - **Maxi Yatzy (6-dice, Norwegian rules) — GPU/CUDA solver.** Same algorithm
   family, redesigned for GPU execution: `kernel.cu`, `main.cu`, `precompute.h`.
-  See the next section.
-- **Yatzy Desktop GUI** (`gui/`) — a Windows desktop app (Tauri) that wraps
-  the standard-Yatzy CLI as a sidecar and adds a full turn-by-turn play UI,
-  including a "vs Computer" mode where the computer plays optimally. See
-  [`gui/README.md`](gui/README.md).
+  Experimental and never run on real hardware — see
+  [Maxi Yatzy (6-dice) — GPU/CUDA solver](#maxi-yatzy-6-dice--gpucuda-solver)
+  below.
+
+## Background
+
+A few years ago I read Michael Larsson and Kristofer Sjöberg's KTH bachelor's
+thesis, ["Optimal Yatzy"](https://www.csc.kth.se/utbildning/kth/kurser/DD143X/dkand12/Group89Michael/report/Larsson+Sjoberg.pdf)
+(DD143X, 2012), and have wanted to try building an optimal-strategy solver
+myself ever since. This repo is that attempt: a backward-induction DP solver
+for standard 5-dice Yatzy, an experimental port to 6-dice Maxi Yatzy on GPU,
+and a desktop app to actually use the solver's recommendations while playing
+a real game.
+
+## Standard Yatzy (CPU)
+
+The actively developed core: a backward-induction DP solver for standard
+5-dice Scandinavian Yatzy (15 categories, upper bonus +50 at 63).
+`precompute_std.h`, `yatzy_engine.h`/`.cpp`, `yatzy_cpu.cpp`. No GPU
+required — plain CPU with `std::thread` parallelism.
+
+Build and test:
+```
+make yatzy_cpu
+make test_yatzy
+```
+
+Query the optimal move for a given game state:
+```
+./yatzy_cpu --used 0,3,7 --upper 12 --dice 2,2,3,5,6 --rerolls 2
+```
+
+- `--used`: comma-separated indices of categories already scored (run
+  `./yatzy_cpu` with no args to see the full index list)
+- `--upper`: running upper-section total so far
+- `--dice`: the 5 dice currently showing
+- `--rerolls`: rerolls remaining this turn (2, 1, or 0)
+- `--json`: machine-parseable output instead of the human-readable table
+- `--dp-cache`: override the DP cache file path (default `yatzy_cpu_dp.bin`)
+
+The DP solve runs once and caches its result to the configured cache file; later
+invocations load the cache instead of recomputing.
+
+## OptiYatzy
+
+A Windows desktop app (`gui/`, built with Tauri — vanilla TypeScript/HTML/CSS,
+no framework) that wraps `yatzy_cpu` as a sidecar binary and adds a full
+turn-by-turn play UI: click each rolled die, get ranked reroll/category
+recommendations back, and play either **Solo** or **vs Computer** (where the
+computer plays every decision optimally, either instantly or step-by-step).
+No engine logic is duplicated — the app calls the same CLI built above.
+
+See [`gui/README.md`](gui/README.md) for usage, building the sidecar, and
+running/developing on Windows (the app itself only runs there — WSL can build
+and test the pure logic, but not launch the real Tauri app).
 
 ## Maxi Yatzy (6-dice) — GPU/CUDA solver
 
-Same exact backward-induction algorithm as the CPU (Go) version, redesigned for GPU
+Same exact backward-induction algorithm as the CPU version, redesigned for GPU
 execution: one CUDA block solves one (mask, upper-total) scorecard state, with threads
 in the block cooperating over the 462 possible 6-dice rolls via shared memory.
 
@@ -78,53 +132,15 @@ change `scoreFullStraight()` if your house rules differ).
 Just re-run `./maxi_solver_gpu` — it checks for `checkpoint_maxi_gpu.bin` and resumes
 from the last completed popcount level automatically.
 
-## Standard Yatzy (CPU)
-
-A second, fully independent solver for standard 5-dice Scandinavian Yatzy
-(15 categories, upper bonus +50 at 63) lives alongside the Maxi/GPU code:
-`precompute_std.h`, `yatzy_engine.h`/`.cpp`, `yatzy_cpu.cpp`. No GPU
-required — plain CPU with `std::thread` parallelism.
-
-Build and test:
-```
-make yatzy_cpu
-make test_yatzy
-```
-
-Query the optimal move for a given game state:
-```
-./yatzy_cpu --used 0,3,7 --upper 12 --dice 2,2,3,5,6 --rerolls 2
-```
-
-- `--used`: comma-separated indices of categories already scored (run
-  `./yatzy_cpu` with no args to see the full index list)
-- `--upper`: running upper-section total so far
-- `--dice`: the 5 dice currently showing
-- `--rerolls`: rerolls remaining this turn (2, 1, or 0)
-- `--json`: machine-parseable output instead of the human-readable table
-- `--dp-cache`: override the DP cache file path (default `yatzy_cpu_dp.bin`)
-
-The DP solve runs once and caches its result to the configured cache file; later
-invocations load the cache instead of recomputing.
-
-## Desktop GUI
-
-A Windows desktop app (`gui/`, built with Tauri — vanilla TypeScript/HTML/CSS,
-no framework) wraps `yatzy_cpu` as a sidecar binary and adds a full
-turn-by-turn play UI: click each rolled die, get ranked reroll/category
-recommendations back, and play either **Solo** or **vs Computer** (where the
-computer plays every decision optimally, either instantly or step-by-step).
-No engine logic is duplicated — the GUI calls the same CLI built above.
-
-See [`gui/README.md`](gui/README.md) for usage, building the sidecar, and
-running/developing on Windows (the app itself only runs there — WSL can build
-and test the pure logic, but not launch the real Tauri app).
-
 ## Further reading
 
 Background on the algorithm class and prior work solving Yahtzee/Yatzy
 optimally with the same backward-induction approach used here:
 
+- Michael Larsson & Kristofer Sjöberg, ["Optimal Yatzy"](https://www.csc.kth.se/utbildning/kth/kurser/DD143X/dkand12/Group89Michael/report/Larsson+Sjoberg.pdf)
+  (KTH Royal Institute of Technology, bachelor's thesis DD143X, 2012) — the
+  paper that originally sparked this project; a from-scratch DP treatment
+  of optimal Scandinavian Yatzy strategy.
 - James Glenn, ["An Optimal Strategy for Yahtzee"](https://www.yahtzeemanifesto.com/an-optimal-strategy-for-yahtzee.php)
   (Loyola College in Maryland, Technical Report CS-TR-0002, 2006) — the
   standard reference for exact optimal-strategy solving of American

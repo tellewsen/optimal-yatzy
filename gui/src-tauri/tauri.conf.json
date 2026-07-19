@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "gui",
+  "productName": "OptiYatzy",
   "version": "0.1.0",
-  "identifier": "com.ae.gui",
+  "identifier": "com.ae.optiyatzy",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "gui",
+        "title": "OptiYatzy",
         "width": 800,
         "height": 600
       }

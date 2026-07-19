@@ -1,4 +1,4 @@
-# Yatzy Desktop GUI
+# OptiYatzy
 
 A Windows desktop app for standard (5-dice, Scandinavian-rules) Yatzy: enter
 your rolls during a real game and get the optimal move back, powered by the

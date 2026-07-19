@@ -8,7 +8,7 @@ Three related but independent Yatzy solvers/apps sharing one repo:
 
 1. **Standard (5-dice, Scandinavian) Yatzy CPU solver** — `yatzy_engine.h`/`.cpp`, `precompute_std.h`, `yatzy_cpu.cpp`. A backward-induction DP solver exposed as a stateless CLI (`yatzy_cpu`). This is the actively-developed core.
 2. **Maxi (6-dice) Yatzy GPU/CUDA solver** — `kernel.cu`, `main.cu`, `precompute.h`. Same algorithm family, redesigned for GPU. Per the repo's original README, the CUDA kernels have never been compiled or run on real hardware (the dev sandbox had no GPU) — treat as unverified, expect first-compile issues.
-3. **Yatzy Desktop GUI** (`gui/`) — a Tauri desktop app (vanilla TypeScript/HTML/CSS, no framework) that wraps `yatzy_cpu` as a sidecar binary and adds a full turn-by-turn play UI (Solo and vs-Computer modes). This is where most current work happens.
+3. **OptiYatzy** (`gui/`) — a Tauri desktop app (vanilla TypeScript/HTML/CSS, no framework) that wraps `yatzy_cpu` as a sidecar binary and adds a full turn-by-turn play UI (Solo and vs-Computer modes). This is where most current work happens.
 
 ## Build & test commands
 
@@ -49,7 +49,7 @@ The actual Tauri app only runs on Windows. After syncing, from PowerShell (or `p
 cd <synced-folder>
 npm install
 npm run tauri dev      # iterate
-npm run tauri build    # produce gui.exe + MSI/NSIS installers
+npm run tauri build    # produce OptiYatzy.exe + MSI/NSIS installers
 ```
 
 ## Architecture
