@@ -28,3 +28,11 @@ gui/node_modules/
 gui/dist/
 gui/src-tauri/target/
 gui/src-tauri/binaries/
+
+# Browser WASM build output (compiled from wasm_bridge.cpp / yatzy_engine.cpp)
+# Note: *.d.ts files in this directory are source (type declarations) not build output
+gui/src/wasm/*
+!gui/src/wasm/*.d.ts
+
+# subagent-driven-development progress ledger (scratch, not source)
+.superpowers/

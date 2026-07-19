@@ -9,6 +9,12 @@ output=$(./yatzy_cpu --used 0,1,2,3,4,5,6,7,8,9,10,11,12,13 --upper 0 --dice 6,6
 echo "$output" | grep -q "Yatzy" || { echo "FAIL: expected Yatzy in output"; exit 1; }
 echo "$output" | grep -qE "score[[:space:]]+50" || { echo "FAIL: expected score 50"; exit 1; }
 
+json_output=$(./yatzy_cpu --used 0,1,2,3,4,5,6,7,8,9,10,11,12,13 --upper 0 --dice 6,6,6,6,6 --rerolls 0 --dp-cache test_cli_dp_cache.bin --json 2>/dev/null)
+
+echo "$json_output" | grep -q '"isRerollDecision":false' || { echo "FAIL: expected isRerollDecision:false in --json output"; exit 1; }
+echo "$json_output" | grep -q '"categoryName":"Yatzy"' || { echo "FAIL: expected Yatzy category in --json output"; exit 1; }
+echo "$json_output" | grep -q '"resultingScore":50' || { echo "FAIL: expected resultingScore 50 in --json output"; exit 1; }
+
 rm -f test_cli_dp_cache.bin
 
 rm -f test_cli_winprob_cache.bin

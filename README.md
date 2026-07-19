@@ -65,9 +65,12 @@ recommendations back, and play either **Solo** or **vs Computer** (where the
 computer plays every decision optimally, either instantly or step-by-step).
 No engine logic is duplicated — the app calls the same CLI built above.
 
-See [`gui/README.md`](gui/README.md) for usage, building the sidecar, and
-running/developing on Windows (the app itself only runs there — WSL can build
-and test the pure logic, but not launch the real Tauri app).
+Solo mode also runs standalone in a plain web browser (no Tauri needed) —
+the engine compiles to WebAssembly with a pre-solved DP table baked in. See
+[`gui/README.md`](gui/README.md) for usage, building the sidecar, building
+the browser (WASM) version, and running/developing on Windows (the Tauri
+app itself only runs there — WSL can build and test the pure logic and the
+browser build, but not launch the real Tauri app).
 
 ## Maxi Yatzy (6-dice) — GPU/CUDA solver
 

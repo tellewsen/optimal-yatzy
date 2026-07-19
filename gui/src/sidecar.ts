@@ -13,7 +13,7 @@ const DP_CACHE_FILENAME = "yatzy_cpu_dp.bin";
 // __TAURI_INTERNALS__ is injected by the Tauri webview at runtime; it's absent
 // when this app is loaded as a plain page (e.g. `npm run dev` in a browser),
 // in which case every Tauri API call below throws.
-function hasTauriRuntime(): boolean {
+export function hasTauriRuntime(): boolean {
   return "__TAURI_INTERNALS__" in window;
 }
 

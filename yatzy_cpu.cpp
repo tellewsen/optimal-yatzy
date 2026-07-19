@@ -174,27 +174,7 @@ int main(int argc, char** argv) {
     QueryResult r = query(t, dp, usedMask, upperTotal, dice, rerollsLeft);
 
     if (jsonOutput) {
-        printf("{\"isRerollDecision\":%s,", r.isRerollDecision ? "true" : "false");
-        if (r.isRerollDecision) {
-            printf("\"rerollOptions\":[");
-            for (size_t i = 0; i < r.rerollOptions.size(); i++) {
-                const auto& opt = r.rerollOptions[i];
-                printf("%s{\"holdValues\":[", i ? "," : "");
-                for (size_t j = 0; j < opt.heldValues.size(); j++)
-                    printf("%s%d", j ? "," : "", opt.heldValues[j]);
-                printf("],\"expectedValue\":%f}", opt.expectedValue);
-            }
-            printf("]");
-        } else {
-            printf("\"categoryOptions\":[");
-            for (size_t i = 0; i < r.categoryOptions.size(); i++) {
-                const auto& opt = r.categoryOptions[i];
-                printf("%s{\"category\":%d,\"categoryName\":\"%s\",\"resultingScore\":%d,\"expectedValue\":%f}",
-                       i ? "," : "", opt.category, CategoryNames[opt.category], opt.resultingScore, opt.expectedValue);
-            }
-            printf("]");
-        }
-        printf("}\n");
+        printf("%s\n", queryResultToJson(r).c_str());
     } else {
         if (r.isRerollDecision) {
             printf("Reroll recommendations (rerolls left: %d):\n", rerollsLeft);

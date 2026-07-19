@@ -2,7 +2,9 @@
 #include "yatzy_engine.h"
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <cstdio>
+#include <sstream>
 #include <thread>
 
 namespace {
@@ -238,12 +240,19 @@ std::vector<float> solveWinProbDP(const FlatTables& t, int maxPopcount) {
     return wp;
 }
 
+// The cache header is a fixed-width uint64_t (NOT `size_t`): `size_t` is
+// 8 bytes on the native (x86-64) build but only 4 bytes on the wasm32
+// build, so a header written by one and read by the other would
+// silently misalign every float that follows it — same value shifted
+// by 4 bytes, not a crash or an empty read, just quietly wrong DP
+// lookups. A fixed-width header keeps the on-disk format identical
+// across architectures.
 bool saveDP(const std::vector<float>& dp, const std::string& path) {
     FILE* f = fopen(path.c_str(), "wb");
     if (!f) return false;
-    size_t n = dp.size();
-    fwrite(&n, sizeof(size_t), 1, f);
-    fwrite(dp.data(), sizeof(float), n, f);
+    uint64_t n = (uint64_t)dp.size();
+    fwrite(&n, sizeof(uint64_t), 1, f);
+    fwrite(dp.data(), sizeof(float), dp.size(), f);
     fclose(f);
     return true;
 }
@@ -251,12 +260,12 @@ bool saveDP(const std::vector<float>& dp, const std::string& path) {
 bool loadDP(std::vector<float>& dp, const std::string& path, size_t expectedSize) {
     FILE* f = fopen(path.c_str(), "rb");
     if (!f) return false;
-    size_t n = 0;
-    if (fread(&n, sizeof(size_t), 1, f) != 1 || n != expectedSize) { fclose(f); return false; }
-    dp.resize(n);
-    size_t read = fread(dp.data(), sizeof(float), n, f);
+    uint64_t n = 0;
+    if (fread(&n, sizeof(uint64_t), 1, f) != 1 || n != (uint64_t)expectedSize) { fclose(f); return false; }
+    dp.resize((size_t)n);
+    size_t read = fread(dp.data(), sizeof(float), (size_t)n, f);
     fclose(f);
-    return read == n;
+    return read == (size_t)n;
 }
 
 std::vector<float> loadOrSolveDP(const FlatTables& t, const std::string& path) {
@@ -466,4 +475,35 @@ WinQueryResult queryForWin(const FlatTables& t, const std::vector<float>& wp,
     std::sort(result.rerollOptions.begin(), result.rerollOptions.end(),
                [](const WinRerollOption& a, const WinRerollOption& b) { return a.winProb > b.winProb; });
     return result;
+}
+
+std::string queryResultToJson(const QueryResult& r) {
+    char buf[64];
+    std::ostringstream out;
+    out << "{\"isRerollDecision\":" << (r.isRerollDecision ? "true" : "false") << ",";
+    if (r.isRerollDecision) {
+        out << "\"rerollOptions\":[";
+        for (size_t i = 0; i < r.rerollOptions.size(); i++) {
+            const auto& opt = r.rerollOptions[i];
+            out << (i ? "," : "") << "{\"holdValues\":[";
+            for (size_t j = 0; j < opt.heldValues.size(); j++)
+                out << (j ? "," : "") << opt.heldValues[j];
+            std::snprintf(buf, sizeof(buf), "%f", opt.expectedValue);
+            out << "],\"expectedValue\":" << buf << "}";
+        }
+        out << "]";
+    } else {
+        out << "\"categoryOptions\":[";
+        for (size_t i = 0; i < r.categoryOptions.size(); i++) {
+            const auto& opt = r.categoryOptions[i];
+            std::snprintf(buf, sizeof(buf), "%f", opt.expectedValue);
+            out << (i ? "," : "") << "{\"category\":" << opt.category
+                << ",\"categoryName\":\"" << CategoryNames[opt.category]
+                << "\",\"resultingScore\":" << opt.resultingScore
+                << ",\"expectedValue\":" << buf << "}";
+        }
+        out << "]";
+    }
+    out << "}";
+    return out.str();
 }

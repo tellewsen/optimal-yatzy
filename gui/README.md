@@ -48,6 +48,53 @@ in the repo root:
 ./scripts/build-sidecar.sh
 ```
 
+## Building the browser (WASM) version
+
+Solo mode also runs standalone in a plain web browser (no Tauri, no
+installed app) — the engine is compiled to WebAssembly with a pre-solved DP
+table baked in, so there's no client-side solve. vs Computer mode is
+desktop-only (its win-probability data is ~3GB, too large to ship to a
+browser) and is automatically disabled when the page isn't running inside
+Tauri.
+
+One-time setup — install [Emscripten](https://emscripten.org/):
+
+```bash
+git clone https://github.com/emscripten-core/emsdk.git ~/emsdk
+cd ~/emsdk && ./emsdk install latest && ./emsdk activate latest
+```
+
+Every time you build the WASM module, `emcc` needs to be on `PATH` in that
+shell — if you haven't added `source ~/emsdk/emsdk_env.sh` to your shell
+startup file (e.g. `~/.bashrc`), run it manually first:
+
+```bash
+source ~/emsdk/emsdk_env.sh   # must run un-piped in the SAME shell as build-wasm.sh —
+                                # piping it (e.g. `| tail`) runs it in a subshell and the
+                                # exported PATH is lost, so `emcc` won't be found after
+```
+
+The build script needs a pre-solved `yatzy_cpu_dp.bin` at the repo root. If
+you don't already have one (check `ls ../yatzy_cpu_dp.bin`), generate it —
+building the native CLI first if you haven't already (`../yatzy_cpu` won't
+exist on a fresh checkout), then running any query, which triggers a
+one-time cold solve (up to a couple of minutes):
+
+```bash
+cd ..
+make yatzy_cpu                # skip if ./yatzy_cpu already exists
+./yatzy_cpu --used 0 --upper 0 --dice 1,1,1,1,1 --rerolls 2
+cd gui
+```
+
+Then build and preview:
+
+```bash
+./scripts/build-wasm.sh   # compiles to src/wasm/ (gitignored — this is build
+                            # output, rerun after any yatzy_engine.cpp change)
+npm run dev                # open the printed URL in a plain browser tab
+```
+
 ## Developing/running on Windows
 
 Windows can't execute a binary sitting on this repo's WSL UNC path, so sync

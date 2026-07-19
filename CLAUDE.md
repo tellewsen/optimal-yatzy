@@ -37,6 +37,9 @@ npx tsc --noEmit               # typecheck
 npm run dev                    # vite dev server — browser preview, NO Tauri/sidecar available
 ./scripts/build-sidecar.sh     # cross-compile yatzy_cpu for Windows; run after ANY change to
                                 # yatzy_engine.cpp / yatzy_cpu.cpp / precompute_std.h at repo root
+./scripts/build-wasm.sh        # compiles the engine's query path to WASM for the browser build
+                                # (Solo mode only); requires emcc (Emscripten) on PATH and a
+                                # pre-solved yatzy_cpu_dp.bin at the repo root
 ./scripts/sync-to-windows.sh   # rsync gui/ to a native Windows path (Windows can't execute off
                                 # the WSL UNC path) — run before any Windows dev/build
 ```
@@ -70,6 +73,8 @@ Each file has one job, and they compose in this order:
 - **`match.ts`** — pure `MatchState` wrapping one or two `GameState`s (`{ mode: "solo"|"vsComputer", turn, player, computer }`) for the two play modes. `activeGameState`/`withActiveGameState` are the seam every handler routes state changes through, so solo mode is just the degenerate case (`computer: null`, `turn` never flips).
 - **`cliArgs.ts`** / **`parseResult.ts`** — pure functions building the CLI args from a `GameState` and parsing its `--json` stdout into a typed result.
 - **`sidecar.ts`** — the only file that touches Tauri: spawns `yatzy_cpu` as a sidecar, streams progress, resolves with a parsed result. Also exposes `isEngineWarm()` (checks whether the DP cache file already exists) for the "Warm Up Engine" button.
+- **`engine.ts`** — dispatches `getRecommendation`/`isEngineWarm` to `sidecar.ts` (inside Tauri) or `wasmEngine.ts` (plain browser), based on `hasTauriRuntime()` (exported from `sidecar.ts`). This is the seam `main.ts` calls through instead of `sidecar.ts` directly.
+- **`wasmEngine.ts`** — the browser counterpart to `sidecar.ts`: calls the compiled WASM module (`src/wasm/yatzy_engine.js`, built by `scripts/build-wasm.sh`, gitignored). The DP table ships pre-solved (baked in via `--preload-file`), so there is no client-side solve, no threading, and `isEngineWarm()` always resolves `true`. Solo mode only — vs-Computer mode is disabled in `main.ts` when `hasTauriRuntime()` is false, since the win-probability table (~3GB) can't ship to a browser.
 - **`render.ts`** — pure DOM writes with no state of its own; every function takes data in and writes to fixed element IDs in `index.html`.
 - **`main.ts`** — the only stateful, orchestrating file. Owns `match`/`lastResult`/settings as module-level `let`s, wires DOM events to `state.ts`/`match.ts` transitions, and calls `sidecar.ts` + `render.ts`. Uses a `generation` counter, bumped on every `setMatch()`, to detect and discard stale async results (e.g. a sidecar call that resolves after "New Game" was clicked).
 

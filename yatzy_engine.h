@@ -68,6 +68,8 @@ struct QueryResult {
     std::vector<CategoryOption> categoryOptions; // populated iff !isRerollDecision
 };
 
+std::string queryResultToJson(const QueryResult& r);
+
 // usedMask: bit i set means category i already scored.
 // upperTotal: raw running upper-section total so far (uncapped).
 // dice: five values, each 1-6.

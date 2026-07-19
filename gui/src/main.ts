@@ -6,7 +6,7 @@ import {
 import {
   MatchState, Mode, initialMatchState, activeGameState, withActiveGameState, afterScore, isMatchComplete,
 } from "./match";
-import { getRecommendation, isEngineWarm } from "./sidecar";
+import { getRecommendation, isEngineWarm, hasTauriRuntime } from "./engine";
 import { QueryResult } from "./parseResult";
 import {
   renderScorecard, renderRerollsIndicator, renderRecommendation, renderError,
@@ -302,6 +302,11 @@ document.getElementById("roll-remaining-button")!.addEventListener("click", hand
 document.getElementById("new-game-button")!.addEventListener("click", openNewGameModal);
 document.getElementById("mode-solo-button")!.addEventListener("click", () => startNewGame("solo"));
 document.getElementById("mode-vs-computer-button")!.addEventListener("click", () => startNewGame("vsComputer"));
+if (!hasTauriRuntime()) {
+  const vsComputerButton = document.getElementById("mode-vs-computer-button") as HTMLButtonElement;
+  vsComputerButton.disabled = true;
+  vsComputerButton.title = "vs Computer mode requires the desktop app (the win-probability table is too large to ship to a browser)";
+}
 document.getElementById("warmup-button")!.addEventListener("click", () => void handleWarmUp());
 document.getElementById("settings-button")!.addEventListener("click", () => {
   const panel = document.getElementById("settings-panel")!;
