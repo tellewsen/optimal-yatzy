@@ -56,6 +56,28 @@ Query the optimal move for a given game state:
 The DP solve runs once and caches its result to the configured cache file; later
 invocations load the cache instead of recomputing.
 
+### Statistical verification
+
+Two independent checks confirm the solver and its `query()` recommendations
+actually produce the optimal-play statistics they claim to, not just that the
+DP's own number looks plausible:
+
+- `make test_dp_exact && ./test_dp_exact` — deterministic, tight-tolerance
+  checks comparing solved `dp[]` cells against closed-form probabilities
+  derived by hand (e.g. the expected count of 1s under the dominant
+  hold-and-reroll strategy), independent of `solveDP()`'s own recursion.
+  Folded into `make test_yatzy`.
+- `make simulate_stats && ./simulate_stats --games 200000` — a Monte Carlo
+  harness that plays full games by following `query()`'s own top-ranked
+  recommendation with real dice rolls, then checks the simulated mean score
+  converges to the DP's exact expected value. Multithreaded across games;
+  run on demand (not part of `make test_yatzy`).
+
+Measured over 200,000 simulated games (seed 42, 16 threads, ~70s): simulated
+mean score **248.40** vs. the DP's exact expected value **248.44** — well
+inside the 95% confidence interval `[248.23, 248.57]` — with the
+upper-section bonus earned in **89.8%** of games.
+
 ## OptiYatzy
 
 A Windows desktop app (`gui/`, built with Tauri — vanilla TypeScript/HTML/CSS,

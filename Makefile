@@ -23,14 +23,27 @@ test_precompute_std: test_precompute_std.cpp precompute_std.h
 test_yatzy_engine: test_yatzy_engine.cpp yatzy_engine.cpp yatzy_engine.h precompute_std.h
 	$(CXX) $(CXXFLAGS_STD) test_yatzy_engine.cpp yatzy_engine.cpp -o test_yatzy_engine
 
-test_yatzy: test_precompute_std test_yatzy_engine yatzy_cpu
+# Tight-tolerance, deterministic checks on solved dp[] cells against
+# closed-form probabilities — fast enough to run every time, unlike
+# simulate_stats below.
+test_dp_exact: test_dp_exact.cpp yatzy_engine.cpp yatzy_engine.h precompute_std.h
+	$(CXX) $(CXXFLAGS_STD) test_dp_exact.cpp yatzy_engine.cpp -o test_dp_exact
+
+# Monte Carlo end-to-end validation: plays real games via query()'s own
+# recommendations and checks the simulated mean against the DP's exact EV.
+# Not part of `test_yatzy` — run manually (~15s for the 50k-game default).
+simulate_stats: simulate_stats.cpp yatzy_engine.cpp yatzy_engine.h precompute_std.h
+	$(CXX) $(CXXFLAGS_STD) simulate_stats.cpp yatzy_engine.cpp -o simulate_stats
+
+test_yatzy: test_precompute_std test_yatzy_engine test_dp_exact yatzy_cpu
 	./test_precompute_std
 	./test_yatzy_engine
+	./test_dp_exact
 	./test_yatzy_cli.sh
 
 clean:
 	rm -f maxi_solver_gpu checkpoint_maxi_gpu.bin checkpoint_maxi_gpu.bin.tmp
-	rm -f yatzy_cpu test_precompute_std test_yatzy_engine
+	rm -f yatzy_cpu test_precompute_std test_yatzy_engine test_dp_exact simulate_stats
 	rm -f yatzy_cpu_dp.bin test_cli_dp_cache.bin
 
 .PHONY: all clean test_yatzy

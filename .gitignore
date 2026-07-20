@@ -5,6 +5,8 @@ maxi_solver_gpu
 yatzy_cpu
 test_precompute_std
 test_yatzy_engine
+test_dp_exact
+simulate_stats
 
 # runtime artifacts
 checkpoint_maxi_gpu.bin
