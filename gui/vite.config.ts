@@ -1,10 +1,25 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
-export default defineConfig(async () => ({
+export default defineConfig(async ({ mode }) => ({
+
+  resolve: {
+    alias: {
+      // engine.ts imports "virtual:wasm-engine" rather than "./wasmEngine"
+      // directly so this alias — not a runtime check — decides which file
+      // Rollup's module graph ever sees. In `tauri` mode (see package.json's
+      // "build:tauri" script) it resolves to the stub, so the real
+      // wasmEngine.ts — and the ~8.4MB pre-solved DP table it pulls in from
+      // src/wasm/ — never enters the desktop build at all.
+      "virtual:wasm-engine": fileURLToPath(
+        new URL(mode === "tauri" ? "./src/wasmEngineStub.ts" : "./src/wasmEngine.ts", import.meta.url)
+      ),
+    },
+  },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //

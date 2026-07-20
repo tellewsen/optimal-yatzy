@@ -23,3 +23,13 @@ tauri-plugin-opener = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-fs = "2"
 
+# Standard Tauri release-size tuning: strips debug symbols, enables full
+# LTO, and builds as a single codegen unit for better cross-crate
+# optimization — trades slower release builds for a meaningfully smaller
+# binary. Doesn't affect dev builds (`cargo build`/`tauri dev`).
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+opt-level = "s"
+
